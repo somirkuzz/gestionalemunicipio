@@ -45,46 +45,40 @@ const PERMESSI = {
 export default function Page() {
   const [user, setUser] = useState(null);
   const [nick, setNick] = useState('');
-  const [pagina, setPagina] = useState('home');
+  const [pagina, setPagina] = useState('home'); // home, congedo, archivio_menu, lista_congedi
   const [pratiche, setPratiche] = useState([]);
   const [form, setForm] = useState({ lore: '', tempo: '', motivo: '' });
   const [loading, setLoading] = useState(false);
 
   const can = (p) => user && PERMESSI[user.r]?.includes(p);
 
-const fetchPratiche = async () => {
-  try {
-    // Aggiungiamo un log per vedere cosa succede nella console del browser (F12)
-    console.log("Tentativo di recupero dati...");
-    
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?select=*`, {
-      method: 'GET',
-      headers: { 
-        "apikey": SUPABASE_KEY, 
-        "Authorization": `Bearer ${SUPABASE_KEY}`,
-        "Content-Type": "application/json"
-      }
-    });
-
-    const data = await res.json();
-
-    if (res.ok) {
-      console.log("Dati ricevuti:", data);
-      setPratiche(data || []);
-    } else {
-      console.error("Errore risposta Supabase:", data);
-    }
-  } catch (e) { 
-    console.error("Errore di rete:", e); 
-  }
-};
+  const fetchPratiche = async () => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?select=*&order=id.desc`, {
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      const data = await res.json();
+      if (res.ok) setPratiche(data || []);
+    } catch (e) { console.error(e); }
+  };
 
   useEffect(() => {
-    if (pagina === 'archivio' && can("DIRIGENZA")) fetchPratiche();
+    if (pagina === 'lista_congedi') fetchPratiche();
   }, [pagina]);
 
+  const aggiornaStato = async (id, nuovoStato) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?id=eq.${id}`, {
+        method: 'PATCH',
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ stato: nuovoStato })
+      });
+      if (res.ok) fetchPratiche();
+    } catch (e) { console.error(e); }
+  };
+
   const inviaCongedo = async () => {
-    if (!form.lore || !form.tempo) return alert("Inserisci i dati obbligatori!");
+    if (!form.lore || !form.tempo) return alert("Inserisci i dati!");
     setLoading(true);
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi`, {
@@ -93,26 +87,8 @@ const fetchPratiche = async () => {
         body: JSON.stringify({ nome_lore: form.lore, nickname: user.n, ruolo: user.r, periodo: form.tempo, motivazione: form.motivo, stato: 'IN ATTESA' })
       });
       if (res.ok) setPagina('successo');
-    } catch (e) { alert("Errore di invio"); }
+    } catch (e) { alert("Errore invio"); }
     setLoading(false);
-  };
-
-  // --- NUOVA FUNZIONE PER AGGIORNARE LO STATO ---
-  const aggiornaStato = async (id, nuovoStato) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?id=eq.${id}`, {
-        method: 'PATCH',
-        headers: { 
-            "apikey": SUPABASE_KEY, 
-            "Authorization": `Bearer ${SUPABASE_KEY}`, 
-            "Content-Type": "application/json",
-            "Prefer": "return=minimal"
-        },
-        body: JSON.stringify({ stato: nuovoStato })
-      });
-      if (res.ok) fetchPratiche(); // Ricarica la lista aggiornata
-      else alert("Errore durante l'aggiornamento.");
-    } catch (e) { console.error(e); }
   };
 
   if (!user) return (
@@ -135,16 +111,17 @@ const fetchPratiche = async () => {
     </nav>
   );
 
+  // --- VISTA: MODULO CONGEDO ---
   if (pagina === 'congedo') return (
     <div style={pageBg}><Header />
       <div style={{...container, maxWidth:'600px'}}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Dashboard</button>
         <div style={formCard}>
-          <h2 style={{color:'#1e3a8a', marginTop:0}}>Richiesta Congedo</h2>
+          <h2 style={{color:'#1e3a8a', marginTop:0}}>Nuovo Congedo</h2>
           <label style={labStyle}>Nome Lore</label>
           <input style={inputStyle} onChange={(e)=>setForm({...form, lore: e.target.value})} />
           <label style={labStyle}>Periodo</label>
-          <input style={inputStyle} placeholder="es. dal 10/05 al 15/05" onChange={(e)=>setForm({...form, tempo: e.target.value})} />
+          <input style={inputStyle} onChange={(e)=>setForm({...form, tempo: e.target.value})} />
           <label style={labStyle}>Motivazione</label>
           <textarea style={{...inputStyle, height:'100px'}} onChange={(e)=>setForm({...form, motivo: e.target.value})} />
           <button onClick={inviaCongedo} disabled={loading} style={submitBtn}>{loading ? "INVIO..." : "INVIA"}</button>
@@ -153,12 +130,28 @@ const fetchPratiche = async () => {
     </div>
   );
 
-  if (pagina === 'archivio') return (
+  // --- VISTA: MENU ARCHIVIO (SEZIONI) ---
+  if (pagina === 'archivio_menu') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Dashboard</button>
+        <h2 style={{marginBottom:'20px'}}>Seleziona Archivio</h2>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:'20px'}}>
+          <Card t="Archivio Congedi" d="Tutte le richieste di assenza." c="#1e3a8a" onClick={()=>setPagina('lista_congedi')} />
+          <Card t="Archivio Anagrafe" d="Documenti e carte d'identità." c="#10b981" onClick={()=>alert("Anagrafe vuota")} />
+          <Card t="Archivio Amministrazione" d="Atti pubblici e multe." c="#f59e0b" onClick={()=>alert("Amministrazione vuota")} />
+        </div>
+      </div>
+    </div>
+  );
+
+  // --- VISTA: LISTA CONGEDI (DETTAGLIO) ---
+  if (pagina === 'lista_congedi') return (
+    <div style={pageBg}><Header />
+      <div style={container}>
+        <button onClick={()=>setPagina('archivio_menu')} style={backBtn}>← Torna alle Sezioni</button>
         <div style={formCard}>
-          <h2 style={{color:'#1e3a8a', marginTop:0}}>Archivio Pratiche</h2>
+          <h2 style={{color:'#1e3a8a', marginTop:0}}>Registro Congedi</h2>
           <table style={{width:'100%', textAlign:'left', borderCollapse:'collapse', marginTop:'20px'}}>
             <thead><tr style={{borderBottom:'2px solid #f1f5f9', color:'#64748b', fontSize:'12px'}}>
               <th style={{padding:'10px'}}>DIPENDENTE</th><th>PERIODO</th><th>STATO</th><th>AZIONI</th>
@@ -172,8 +165,8 @@ const fetchPratiche = async () => {
                   <td>
                     {p.stato === 'IN ATTESA' && (
                       <div style={{display:'flex', gap:'5px'}}>
-                        <button onClick={()=>aggiornaStato(p.id, 'APPROVATA')} style={{padding:'5px', background:'#10b981', color:'white', border:'none', borderRadius:'4px', cursor:'pointer', fontSize:'10px'}}>SÌ</button>
-                        <button onClick={()=>aggiornaStato(p.id, 'RIFIUTATA')} style={{padding:'5px', background:'#ef4444', color:'white', border:'none', borderRadius:'4px', cursor:'pointer', fontSize:'10px'}}>NO</button>
+                        <button onClick={()=>aggiornaStato(p.id, 'APPROVATA')} style={{padding:'5px', background:'#10b981', color:'white', border:'none', borderRadius:'4px', cursor:'pointer'}}>SÌ</button>
+                        <button onClick={()=>aggiornaStato(p.id, 'RIFIUTATA')} style={{padding:'5px', background:'#ef4444', color:'white', border:'none', borderRadius:'4px', cursor:'pointer'}}>NO</button>
                       </div>
                     )}
                   </td>
@@ -187,18 +180,18 @@ const fetchPratiche = async () => {
   );
 
   if (pagina === 'successo') return (
-    <div style={loginBg}><div style={loginCard}><h2>Inviata! ✅</h2><button onClick={()=>setPagina('home')} style={submitBtn}>HOME</button></div></div>
+    <div style={loginBg}><div style={loginCard}><h2>Inviata! ✅</h2><button onClick={()=>setPagina('home')} style={submitBtn}>TORNA ALLA DASHBOARD</button></div></div>
   );
 
   return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <h1 style={{marginBottom:'30px'}}>Dashboard</h1>
+        <h1 style={{marginBottom:'30px'}}>Dashboard Gestionale</h1>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'25px'}}>
-          {can("CONGEDO") && <Card t="Modulo Congedo" d="Invia richiesta." c="#1e3a8a" onClick={()=>setPagina('congedo')} />}
-          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Approva/Rifiuta pratiche." c="#ef4444" onClick={()=>setPagina('archivio')} />}
-          <Card t="Anagrafe" d="Prossimamente..." c="#10b981" onClick={()=>alert("In sviluppo")} />
-          <Card t="Amministrazione" d="Prossimamente..." c="#f59e0b" onClick={()=>alert("In sviluppo")} />
+          {can("CONGEDO") && <Card t="Modulo Congedo" d="Compila la richiesta." c="#1e3a8a" onClick={()=>setPagina('congedo')} />}
+          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Gestione di tutte le sezioni." c="#ef4444" onClick={()=>setPagina('archivio_menu')} />}
+          <Card t="Servizi Anagrafe" d="Gestione cittadini." c="#10b981" onClick={()=>alert("In sviluppo")} />
+          <Card t="Amministrazione" d="Gestione atti." c="#f59e0b" onClick={()=>alert("In sviluppo")} />
         </div>
       </div>
     </div>
