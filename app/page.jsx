@@ -52,15 +52,32 @@ export default function Page() {
 
   const can = (p) => user && PERMESSI[user.r]?.includes(p);
 
-  const fetchPratiche = async () => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?select=*&order=created_at.desc`, {
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
-      });
-      const data = await res.json();
-      if (res.ok) setPratiche(data || []);
-    } catch (e) { console.error(e); }
-  };
+const fetchPratiche = async () => {
+  try {
+    // Aggiungiamo un log per vedere cosa succede nella console del browser (F12)
+    console.log("Tentativo di recupero dati...");
+    
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?select=*`, {
+      method: 'GET',
+      headers: { 
+        "apikey": SUPABASE_KEY, 
+        "Authorization": `Bearer ${SUPABASE_KEY}`,
+        "Content-Type": "application/json"
+      }
+    });
+
+    const data = await res.json();
+
+    if (res.ok) {
+      console.log("Dati ricevuti:", data);
+      setPratiche(data || []);
+    } else {
+      console.error("Errore risposta Supabase:", data);
+    }
+  } catch (e) { 
+    console.error("Errore di rete:", e); 
+  }
+};
 
   useEffect(() => {
     if (pagina === 'archivio' && can("DIRIGENZA")) fetchPratiche();
