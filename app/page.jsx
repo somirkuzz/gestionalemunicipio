@@ -45,7 +45,7 @@ const PERMESSI = {
 export default function Page() {
   const [user, setUser] = useState(null);
   const [nick, setNick] = useState('');
-  const [pagina, setPagina] = useState('home'); // home, congedo, archivio_menu, lista_congedi
+  const [pagina, setPagina] = useState('home'); 
   const [pratiche, setPratiche] = useState([]);
   const [form, setForm] = useState({ lore: '', tempo: '', motivo: '' });
   const [loading, setLoading] = useState(false);
@@ -77,8 +77,19 @@ export default function Page() {
     } catch (e) { console.error(e); }
   };
 
+  const eliminaPratica = async (id) => {
+    if(!confirm("Vuoi davvero eliminare questa pratica?")) return;
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi?id=eq.${id}`, {
+        method: 'DELETE',
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
+      });
+      if (res.ok) fetchPratiche();
+    } catch (e) { console.error(e); }
+  };
+
   const inviaCongedo = async () => {
-    if (!form.lore || !form.tempo) return alert("Inserisci i dati!");
+    if (!form.lore || !form.tempo) return alert("Inserisci i dati obbligatori!");
     setLoading(true);
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/congedi`, {
@@ -94,128 +105,159 @@ export default function Page() {
   if (!user) return (
     <div style={loginBg}>
       <div style={loginCard}>
-        <h2 style={{color:'#1e3a8a', marginBottom:'20px'}}>ATLANTIS RP</h2>
-        <input style={inputStyle} placeholder="Nickname" value={nick} onChange={(e)=>setNick(e.target.value)} />
-        <button onClick={()=>{ if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); }} style={submitBtn}>ACCEDI</button>
+        <h2 style={{color:'#1e3a8a', marginBottom:'20px', letterSpacing:'1px'}}>ATLANTIS RP</h2>
+        <input style={inputStyle} placeholder="Inserisci il tuo Nickname" value={nick} onChange={(e)=>setNick(e.target.value)} />
+        <button onClick={()=>{ if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); else alert("Non autorizzato"); }} style={submitBtn}>ACCEDI AL SISTEMA</button>
       </div>
     </div>
   );
 
   const Header = () => (
     <nav style={navStyle}>
-      <h2 onClick={() => setPagina('home')} style={{cursor:'pointer', margin:0}}>SISTEMA MUNICIPIO</h2>
+      <h2 onClick={() => setPagina('home')} style={{cursor:'pointer', margin:0, fontSize:'18px'}}>MUNICIPIO ATLANTIS</h2>
       <div style={{display:'flex', gap:'20px', alignItems:'center'}}>
-        <div style={{textAlign:'right'}}><b>{user.n}</b><br/><small>{user.r.replace(/_/g, ' ')}</small></div>
+        <div style={{textAlign:'right', lineHeight:'1.2'}}>
+          <span style={{fontSize:'14px', fontWeight:'bold'}}>{user.n}</span><br/>
+          <small style={{fontSize:'10px', color:'#bfdbfe'}}>{user.r.replace(/_/g, ' ')}</small>
+        </div>
         <button onClick={() => {setUser(null); setPagina('home');}} style={logoutBtn}>LOGOUT</button>
       </div>
     </nav>
   );
 
-  // --- VISTA: MODULO CONGEDO ---
+  // --- PAGINA: NUOVO CONGEDO ---
   if (pagina === 'congedo') return (
     <div style={pageBg}><Header />
       <div style={{...container, maxWidth:'600px'}}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Dashboard</button>
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Torna alla Dashboard</button>
         <div style={formCard}>
-          <h2 style={{color:'#1e3a8a', marginTop:0}}>Nuovo Congedo</h2>
-          <label style={labStyle}>Nome Lore</label>
-          <input style={inputStyle} onChange={(e)=>setForm({...form, lore: e.target.value})} />
-          <label style={labStyle}>Periodo</label>
-          <input style={inputStyle} onChange={(e)=>setForm({...form, tempo: e.target.value})} />
-          <label style={labStyle}>Motivazione</label>
-          <textarea style={{...inputStyle, height:'100px'}} onChange={(e)=>setForm({...form, motivo: e.target.value})} />
-          <button onClick={inviaCongedo} disabled={loading} style={submitBtn}>{loading ? "INVIO..." : "INVIA"}</button>
+          <h2 style={{color:'#1e3a8a', marginTop:0, borderBottom:'2px solid #f1f5f9', paddingBottom:'10px'}}>Richiesta Congedo</h2>
+          <div style={{marginTop:'20px'}}>
+            <label style={labStyle}>Nome Personaggio (Lore)</label>
+            <input style={inputStyle} value={form.lore} onChange={(e)=>setForm({...form, lore: e.target.value})} placeholder="es. Mario Rossi" />
+            <label style={labStyle}>Periodo Assenza</label>
+            <input style={inputStyle} value={form.tempo} onChange={(e)=>setForm({...form, tempo: e.target.value})} placeholder="es. dal 15/04 al 20/04" />
+            <label style={labStyle}>Motivazione</label>
+            <textarea style={{...inputStyle, height:'120px'}} value={form.motivo} onChange={(e)=>setForm({...form, motivo: e.target.value})} placeholder="Spiega brevemente il motivo..." />
+            <button onClick={inviaCongedo} disabled={loading} style={submitBtn}>{loading ? "INVIO IN CORSO..." : "INVIA RICHIESTA"}</button>
+          </div>
         </div>
       </div>
     </div>
   );
 
-  // --- VISTA: MENU ARCHIVIO (SEZIONI) ---
+  // --- PAGINA: MENU ARCHIVI ---
   if (pagina === 'archivio_menu') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Dashboard</button>
-        <h2 style={{marginBottom:'20px'}}>Seleziona Archivio</h2>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(250px, 1fr))', gap:'20px'}}>
-          <Card t="Archivio Congedi" d="Tutte le richieste di assenza." c="#1e3a8a" onClick={()=>setPagina('lista_congedi')} />
-          <Card t="Archivio Anagrafe" d="Documenti e carte d'identità." c="#10b981" onClick={()=>alert("Anagrafe vuota")} />
-          <Card t="Archivio Amministrazione" d="Atti pubblici e multe." c="#f59e0b" onClick={()=>alert("Amministrazione vuota")} />
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Torna alla Dashboard</button>
+        <h1 style={{color:'#1e293b', marginBottom:'30px'}}>Archivi di Stato</h1>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'30px'}}>
+          <Card t="Archivio Congedi" d="Gestisci le assenze e i permessi del personale." c="#1e3a8a" onClick={()=>setPagina('lista_congedi')} />
+          <Card t="Anagrafe Storica" d="Registro dei cittadini e documenti d'identità." c="#10b981" onClick={()=>alert("Sezione in allestimento")} />
+          <Card t="Atti Amministrativi" d="Multe, licenze e ordinanze comunali." c="#f59e0b" onClick={()=>alert("Sezione in allestimento")} />
         </div>
       </div>
     </div>
   );
 
-  // --- VISTA: LISTA CONGEDI (DETTAGLIO) ---
+  // --- PAGINA: TABELLA CONGEDI ---
   if (pagina === 'lista_congedi') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('archivio_menu')} style={backBtn}>← Torna alle Sezioni</button>
+        <button onClick={()=>setPagina('archivio_menu')} style={backBtn}>← Torna agli Archivi</button>
         <div style={formCard}>
-          <h2 style={{color:'#1e3a8a', marginTop:0}}>Registro Congedi</h2>
-          <table style={{width:'100%', textAlign:'left', borderCollapse:'collapse', marginTop:'20px'}}>
-            <thead><tr style={{borderBottom:'2px solid #f1f5f9', color:'#64748b', fontSize:'12px'}}>
-              <th style={{padding:'10px'}}>DIPENDENTE</th><th>PERIODO</th><th>STATO</th><th>AZIONI</th>
-            </tr></thead>
-            <tbody>
-              {pratiche.map((p, i) => (
-                <tr key={i} style={{borderBottom:'1px solid #f8fafc', fontSize:'13px'}}>
-                  <td style={{padding:'12px'}}><b>{p.nickname}</b><br/><small>{p.nome_lore}</small></td>
-                  <td>{p.periodo}</td>
-                  <td style={{fontWeight:'bold', color: p.stato === 'APPROVATA' ? '#10b981' : p.stato === 'RIFIUTATA' ? '#ef4444' : '#f59e0b'}}>{p.stato}</td>
-                  <td>
-                    {p.stato === 'IN ATTESA' && (
-                      <div style={{display:'flex', gap:'5px'}}>
-                        <button onClick={()=>aggiornaStato(p.id, 'APPROVATA')} style={{padding:'5px', background:'#10b981', color:'white', border:'none', borderRadius:'4px', cursor:'pointer'}}>SÌ</button>
-                        <button onClick={()=>aggiornaStato(p.id, 'RIFIUTATA')} style={{padding:'5px', background:'#ef4444', color:'white', border:'none', borderRadius:'4px', cursor:'pointer'}}>NO</button>
-                      </div>
-                    )}
-                  </td>
+          <div style={{display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:'20px'}}>
+            <h2 style={{color:'#1e3a8a', margin:0}}>Registro Congedi Personale</h2>
+            <button onClick={fetchPratiche} style={refreshBtn}>Aggiorna ↻</button>
+          </div>
+          <div style={{overflowX:'auto'}}>
+            <table style={{width:'100%', borderCollapse:'collapse'}}>
+              <thead>
+                <tr style={{background:'#f8fafc', borderBottom:'2px solid #e2e8f0'}}>
+                  <th style={thStyle}>DIPENDENTE</th>
+                  <th style={thStyle}>PERIODO</th>
+                  <th style={thStyle}>STATO</th>
+                  <th style={thStyle}>AZIONI</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pratiche.map((p) => (
+                  <tr key={p.id} style={{borderBottom:'1px solid #f1f5f9'}}>
+                    <td style={tdStyle}><b>{p.nickname}</b><br/><small style={{color:'#64748b'}}>{p.nome_lore}</small></td>
+                    <td style={tdStyle}>{p.periodo}</td>
+                    <td style={{...tdStyle, fontWeight:'bold', color: p.stato === 'APPROVATA' ? '#10b981' : p.stato === 'RIFIUTATA' ? '#ef4444' : '#f59e0b'}}>{p.stato}</td>
+                    <td style={tdStyle}>
+                      <div style={{display:'flex', gap:'8px'}}>
+                        {p.stato === 'IN ATTESA' && (
+                          <>
+                            <button onClick={()=>aggiornaStato(p.id, 'APPROVATA')} style={btnApprove}>OK</button>
+                            <button onClick={()=>aggiornaStato(p.id, 'RIFIUTATA')} style={btnReject}>NO</button>
+                          </>
+                        )}
+                        <button onClick={()=>eliminaPratica(p.id)} style={btnDelete}>🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
     </div>
   );
 
   if (pagina === 'successo') return (
-    <div style={loginBg}><div style={loginCard}><h2>Inviata! ✅</h2><button onClick={()=>setPagina('home')} style={submitBtn}>TORNA ALLA DASHBOARD</button></div></div>
+    <div style={loginBg}><div style={loginCard}><h2 style={{color:'#10b981'}}>Richiesta Inviata! ✅</h2><p style={{fontSize:'14px', color:'#64748b'}}>Il municipio valuterà la tua pratica.</p><button onClick={()=>setPagina('home')} style={submitBtn}>TORNA ALLA HOME</button></div></div>
   );
 
+  // --- HOME DASHBOARD ---
   return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <h1 style={{marginBottom:'30px'}}>Dashboard Gestionale</h1>
+        <div style={{marginBottom:'40px'}}>
+          <h1 style={{color:'#0f172a', margin:0}}>Benvenuto, {user.n}</h1>
+          <p style={{color:'#64748b', marginTop:'5px'}}>Sistema di gestione uffici Atlantis RP</p>
+        </div>
         <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'25px'}}>
-          {can("CONGEDO") && <Card t="Modulo Congedo" d="Compila la richiesta." c="#1e3a8a" onClick={()=>setPagina('congedo')} />}
-          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Gestione di tutte le sezioni." c="#ef4444" onClick={()=>setPagina('archivio_menu')} />}
-          <Card t="Servizi Anagrafe" d="Gestione cittadini." c="#10b981" onClick={()=>alert("In sviluppo")} />
-          <Card t="Amministrazione" d="Gestione atti." c="#f59e0b" onClick={()=>alert("In sviluppo")} />
+          {can("CONGEDO") && <Card t="Richiesta Congedo" d="Invia una nuova domanda di assenza." c="#1e3a8a" onClick={()=>setPagina('congedo')} />}
+          <Card t="Ufficio Anagrafe" d="Gestione dei cittadini (Prossimamente)." c="#10b981" onClick={()=>alert("In sviluppo")} />
+          <Card t="Ufficio Amministrativo" d="Gestione documenti (Prossimamente)." c="#f59e0b" onClick={()=>alert("In sviluppo")} />
+          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Pannello controllo Dirigenti e Vice." c="#ef4444" onClick={()=>setPagina('archivio_menu')} />}
         </div>
       </div>
     </div>
   );
 }
 
-// STILI CSS
+// --- STILI ---
 const loginBg = { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', fontFamily:'sans-serif' };
-const loginCard = { background:'white', padding:'40px', borderRadius:'20px', textAlign:'center', width:'300px' };
-const pageBg = { minHeight:'100vh', background:'#f8fafc', fontFamily:'sans-serif' };
-const navStyle = { background:'#1e3a8a', color:'white', padding:'15px 40px', display:'flex', justifyContent:'space-between', alignItems:'center' };
-const logoutBtn = { background:'#ef4444', color:'white', border:'none', padding:'8px 12px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', fontSize:'10px' };
-const container = { padding:'40px', maxWidth:'1200px', margin:'0 auto' };
-const formCard = { background:'white', padding:'30px', borderRadius:'15px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)' };
-const labStyle = { display:'block', fontSize:'11px', fontWeight:'bold', color:'#64748b', marginBottom:'5px' };
-const inputStyle = { width:'100%', padding:'10px', marginBottom:'15px', borderRadius:'8px', border:'1px solid #ddd', boxSizing:'border-box' };
-const submitBtn = { width:'100%', padding:'12px', background:'#1e3a8a', color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' };
-const backBtn = { background:'none', border:'none', color:'#1e3a8a', fontWeight:'bold', cursor:'pointer', marginBottom:'10px' };
+const loginCard = { background:'white', padding:'45px', borderRadius:'24px', textAlign:'center', width:'340px', boxShadow:'0 20px 50px rgba(0,0,0,0.3)' };
+const pageBg = { minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif' };
+const navStyle = { background:'#1e3a8a', color:'white', padding:'15px 50px', display:'flex', justifyContent:'space-between', alignItems:'center', boxShadow:'0 4px 12px rgba(0,0,0,0.1)' };
+const logoutBtn = { background:'rgba(255,255,255,0.1)', color:'white', border:'1px solid rgba(255,255,255,0.2)', padding:'8px 15px', borderRadius:'8px', cursor:'pointer', fontSize:'11px', fontWeight:'bold' };
+const container = { padding:'50px', maxWidth:'1200px', margin:'0 auto' };
+const formCard = { background:'white', padding:'35px', borderRadius:'20px', boxShadow:'0 10px 25px rgba(0,0,0,0.05)' };
+const labStyle = { display:'block', fontSize:'12px', fontWeight:'bold', color:'#475569', marginBottom:'8px', textTransform:'uppercase' };
+const inputStyle = { width:'100%', padding:'12px', marginBottom:'20px', borderRadius:'10px', border:'1px solid #e2e8f0', background:'#f8fafc', boxSizing:'border-box', outline:'none' };
+const submitBtn = { width:'100%', padding:'14px', background:'#1e3a8a', color:'white', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'14px', transition:'0.3s' };
+const backBtn = { background:'none', border:'none', color:'#1e3a8a', fontWeight:'bold', cursor:'pointer', marginBottom:'15px', display:'flex', alignItems:'center', gap:'5px' };
+const refreshBtn = { background:'#f1f5f9', border:'none', padding:'8px 15px', borderRadius:'8px', cursor:'pointer', color:'#475569', fontWeight:'bold', fontSize:'12px' };
+const thStyle = { padding:'15px', textAlign:'left', fontSize:'11px', color:'#64748b', textTransform:'uppercase', letterSpacing:'0.5px' };
+const tdStyle = { padding:'15px', fontSize:'14px', color:'#1e293b' };
+const btnApprove = { padding:'6px 12px', background:'#10b981', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', fontSize:'10px' };
+const btnReject = { padding:'6px 12px', background:'#ef4444', color:'white', border:'none', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', fontSize:'10px' };
+const btnDelete = { padding:'6px 10px', background:'#f1f5f9', color:'#94a3b8', border:'none', borderRadius:'6px', cursor:'pointer' };
 
 function Card({t, d, c, onClick}) {
   return (
-    <div style={{background:'white', padding:'25px', borderRadius:'15px', borderTop:`6px solid ${c}`, boxShadow:'0 4px 10px rgba(0,0,0,0.05)'}}>
-      <h3>{t}</h3><p style={{fontSize:'12px', color:'#64748b'}}>{d}</p>
-      <button onClick={onClick} style={{width:'100%', padding:'10px', background:c, color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}>ENTRA</button>
+    <div style={{background:'white', padding:'30px', borderRadius:'20px', borderLeft:`8px solid ${c}`, boxShadow:'0 4px 15px rgba(0,0,0,0.03)', display:'flex', flexDirection:'column', justifyContent:'space-between'}}>
+      <div>
+        <h3 style={{margin:'0 0 10px 0', color:'#1e293b', fontSize:'18px'}}>{t}</h3>
+        <p style={{fontSize:'13px', color:'#64748b', lineHeight:'1.5', marginBottom:'25px'}}>{d}</p>
+      </div>
+      <button onClick={onClick} style={{width:'100%', padding:'12px', background:c, color:'white', border:'none', borderRadius:'10px', cursor:'pointer', fontWeight:'bold', fontSize:'12px'}}>ACCEDI</button>
     </div>
   );
 }
