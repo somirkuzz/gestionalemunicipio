@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 
 // --- CONFIGURAZIONE DATABASE ATLANTIS ---
-const SUPABASE_URL = 'https://xvtfdbuomstrpfmprojwrg.supabase.co';
+const SUPABASE_URL = 'https://xvtfdbuomstrpfrojwrg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dGZkYnVvbXN0cnBmcm9qd3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDQ5OTcsImV4cCI6MjA5MDE4MDk5N30.6yt3myNpafxXB12b75vGYMcmLRcGnV1x8a1wA8F4RoI';
 
 const DIPENDENTI = {
