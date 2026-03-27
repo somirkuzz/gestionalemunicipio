@@ -44,11 +44,10 @@ export default function Page() {
   const [user, setUser] = useState(null);
   const [nick, setNick] = useState('');
   const [err, setErr] = useState(false);
-  const [paginaAttiva, setPaginaAttiva] = useState('dashboard'); // 'dashboard', 'congedo', 'successo'
+  const [paginaAttiva, setPaginaAttiva] = useState('dashboard'); 
 
   const handleLogout = () => { setUser(null); setNick(''); setPaginaAttiva('dashboard'); };
 
-  // --- LOGIN ---
   if (!user) return (
     <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', fontFamily:'sans-serif'}}>
       <div style={{background:'white', padding:'40px', borderRadius:'20px', textAlign:'center', width:'320px', boxShadow:'0 10px 25px rgba(0,0,0,0.4)'}}>
@@ -63,7 +62,6 @@ export default function Page() {
 
   const can = (p) => PERMESSI[user.r]?.includes(p);
 
-  // --- HEADER ---
   const Header = () => (
     <nav style={navStyle}>
       <h2 style={{margin:0, fontSize:'18px', cursor:'pointer'}} onClick={() => setPaginaAttiva('dashboard')}>MUNICIPIO ATLANTIS</h2>
@@ -77,26 +75,47 @@ export default function Page() {
     </nav>
   );
 
-  // --- SCHERMATA DI SUCCESSO ---
-  if (paginaAttiva === 'successo') return (
-    <div style={{minHeight:'100vh', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'sans-serif'}}>
-      <div style={{background:'white', padding:'50px', borderRadius:'25px', textAlign:'center', maxWidth:'400px', boxShadow:'0 20px 50px rgba(0,0,0,0.1)'}}>
-        <div style={{fontSize:'60px', color:'#10b981', marginBottom:'20px'}}>✓</div>
-        <h2 style={{color:'#1e3a8a', margin:'0 0 10px 0'}}>Richiesta Inviata!</h2>
-        <p style={{color:'#64748b', fontSize:'14px', lineHeight:'1.6', marginBottom:'30px'}}>
-          La tua pratica è stata registrata correttamente nel sistema. Riceverai un responso dalla dirigenza il prima possibile.
-        </p>
-        <button onClick={() => setPaginaAttiva('dashboard')} style={submitBtn}>TORNA ALLA HOME</button>
+  // --- SCHERMATA: ARCHIVIO (SOLO DIREZIONE) ---
+  if (paginaAttiva === 'archivio' && can("DIRIGENZA")) return (
+    <div style={{minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif'}}>
+      <Header />
+      <div style={{padding:'40px', maxWidth:'1000px', margin:'0 auto'}}>
+        <button onClick={() => setPaginaAttiva('dashboard')} style={backBtn}>← Dashboard</button>
+        <h1 style={{color:'#1e3a8a', marginBottom:'20px'}}>Archivio Pratiche Centrale</h1>
+        <div style={{background:'white', borderRadius:'15px', padding:'20px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)'}}>
+          <table style={{width:'100%', borderCollapse:'collapse'}}>
+            <thead>
+              <tr style={{borderBottom:'2px solid #f1f5f9', textAlign:'left', color:'#64748b', fontSize:'12px'}}>
+                <th style={{padding:'15px'}}>DATA</th>
+                <th>TIPO</th>
+                <th>DIPENDENTE</th>
+                <th>STATO</th>
+                <th>AZIONI</th>
+              </tr>
+            </thead>
+            <tbody style={{fontSize:'14px'}}>
+              <tr style={{borderBottom:'1px solid #f8fafc'}}>
+                <td style={{padding:'15px'}}>27/03/2026</td>
+                <td><span style={{background:'#e0f2fe', color:'#0369a1', padding:'4px 8px', borderRadius:'5px', fontSize:'11px', fontWeight:'bold'}}>CONGEDO</span></td>
+                <td>Paolix09XL</td>
+                <td><span style={{color:'#f59e0b', fontWeight:'bold'}}>IN ATTESA</span></td>
+                <td><button style={{background:'#1e3a8a', color:'white', border:'none', padding:'5px 10px', borderRadius:'5px', cursor:'pointer', fontSize:'11px'}}>VEDI</button></td>
+              </tr>
+              {/* Qui in futuro caricheremo le vere pratiche */}
+            </tbody>
+          </table>
+          <p style={{textAlign:'center', color:'#94a3b8', fontSize:'12px', marginTop:'20px'}}>Nessun'altra pratica recente trovata.</p>
+        </div>
       </div>
     </div>
   );
 
-  // --- VISTA: MODULO CONGEDO ---
+  // --- SCHERMATA: MODULO CONGEDO ---
   if (paginaAttiva === 'congedo') return (
     <div style={{minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif'}}>
       <Header />
       <div style={{padding:'40px', maxWidth:'700px', margin:'0 auto'}}>
-        <button onClick={() => setPaginaAttiva('dashboard')} style={backBtn}>← Torna alla Dashboard</button>
+        <button onClick={() => setPaginaAttiva('dashboard')} style={backBtn}>← Dashboard</button>
         <div style={formCard}>
           <h2 style={{marginTop:0, color:'#1e3a8a'}}>Modulo di Congedo</h2>
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px', marginTop:'20px'}}>
@@ -112,6 +131,16 @@ export default function Page() {
     </div>
   );
 
+  if (paginaAttiva === 'successo') return (
+    <div style={{minHeight:'100vh', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontFamily:'sans-serif'}}>
+      <div style={{background:'white', padding:'50px', borderRadius:'25px', textAlign:'center', maxWidth:'400px', boxShadow:'0 20px 50px rgba(0,0,0,0.1)'}}>
+        <div style={{fontSize:'60px', color:'#10b981', marginBottom:'20px'}}>✓</div>
+        <h2 style={{color:'#1e3a8a'}}>Inviata con Successo!</h2>
+        <button onClick={() => setPaginaAttiva('dashboard')} style={submitBtn}>TORNA ALLA HOME</button>
+      </div>
+    </div>
+  );
+
   // --- DASHBOARD ---
   return (
     <div style={{minHeight:'100vh', background:'#f8fafc', fontFamily:'sans-serif'}}>
@@ -122,14 +151,16 @@ export default function Page() {
           {can("CONGEDO") && <Card t="Modulo Congedo" d="Richiedi ferie o permessi." c="#1e3a8a" onClick={() => setPaginaAttiva('congedo')} />}
           {can("ANAGRAFE") && <Card t="Ufficio Anagrafe" d="Cambi nome, adozioni, divorzi." c="#10b981" onClick={() => {}} />}
           {can("AMMINISTRATIVO") && <Card t="Amministrazione" d="Rettifica documenti e date." c="#f59e0b" onClick={() => {}} />}
-          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Accesso riservato Dirigenti." c="#ef4444" onClick={() => {}} />}
+          
+          {/* VISIBILE SOLO A DIRETTORI E VICE */}
+          {can("DIRIGENZA") && <Card t="Archivio Centrale" d="Pannello di controllo riservato." c="#ef4444" onClick={() => setPaginaAttiva('archivio')} />}
         </div>
       </div>
     </div>
   );
 }
 
-// --- STILI ---
+// STILI
 const navStyle = { background:'#1e3a8a', color:'white', padding:'15px 40px', display:'flex', justifyContent:'space-between', alignItems:'center' };
 const logoutBtn = { background:'#ef4444', color:'white', border:'none', padding:'8px 15px', borderRadius:'6px', fontWeight:'bold', cursor:'pointer', fontSize:'11px' };
 const loginInput = { width:'100%', padding:'15px', marginBottom:'15px', borderRadius:'10px', border:'2px solid #f1f5f9', outline:'none', boxSizing:'border-box' };
