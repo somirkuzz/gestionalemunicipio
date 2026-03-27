@@ -74,7 +74,7 @@ export default function Page() {
           <div style={{display:'grid', gridTemplateColumns:'1fr 1fr', gap:'20px'}}>
             <div>
               <label style={labelStyle}>Nome e Cognome Lore</label>
-              <input style={inputStyle} placeholder="Nome Cognome IC" />
+              <input style={inputStyle} placeholder="Nome e Cognome Roleplay" />
             </div>
             <div>
               <label style={labelStyle}>Nickname</label>
