@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 const SUPABASE_URL = 'https://xvtfdbuomstrpfrojwrg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dGZkYnVvbXN0cnBmcm9qd3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDQ5OTcsImV4cCI6MjA5MDE4MDk5N30.6yt3myNpafxXB12b75vGYMcmLRcGnV1x8a1wA8F4RoI';
 
-const LINK_CARTELLONI = "https://docs.google.com/spreadsheets/d/1vP6Z-zI_KkIu0rO_3iYwM1z3K-I_N6uS/edit";
+const LINK_CARTELLONI = "https://docs.google.com/spreadsheets/d/1gIG-jdgs4hQykQV1O4sF50hDd5UYthj-w--pEk591QA/edit?usp=sharing";
 
 const DIPENDENTI = {
   "Paolix09XL": "DIRIGENTE",
