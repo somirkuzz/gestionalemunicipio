@@ -51,12 +51,22 @@ export default function Page() {
   const [archivio, setArchivio] = useState([]);
   const [tabellaCorrente, setTabellaCorrente] = useState('');
 
+  // Auto-compilazione data e nome ogni volta che si apre un form
+  useEffect(() => {
+    if (user && pagina.startsWith('form_')) {
+      setForm(prev => ({
+        ...prev,
+        data: new Date().toLocaleDateString('it-IT'),
+        nome_dipendente: user.n
+      }));
+    }
+  }, [pagina, user]);
+
   const can = (p) => user && (PERMESSI[user.r] || []).includes(p);
 
-  const inviaPratica = async (tabella, dati) => {
+  const inviaPratica = async (tabella) => {
     setLoading(true);
-    const oggi = new Date().toLocaleDateString('it-IT');
-    const payload = { ...dati, data: oggi, nome_dipendente: user.n, stato: 'IN ATTESA' };
+    const payload = { ...form, stato: 'IN ATTESA' };
     try {
       const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabella}`, {
         method: 'POST',
@@ -64,7 +74,7 @@ export default function Page() {
         body: JSON.stringify(payload)
       });
       if (res.ok) { setPagina('successo'); setForm({}); }
-      else alert("Errore database. Verifica colonne su Supabase.");
+      else alert("Errore database.");
     } catch (e) { alert("Errore connessione."); }
     setLoading(false);
   };
@@ -93,58 +103,73 @@ export default function Page() {
     </nav>
   );
 
+  const CommonFields = () => (
+    <>
+      <label style={labStyle}>Data Pratica</label>
+      <input style={inputStyle} value={form.data || ''} onChange={(e)=>setForm({...form, data: e.target.value})} />
+      <label style={labStyle}>Nome Dipendente Responsabile</label>
+      <input style={inputStyle} value={form.nome_dipendente || ''} onChange={(e)=>setForm({...form, nome_dipendente: e.target.value})} />
+    </>
+  );
+
   if (!user) return (
     <div style={loginBg}><div style={loginCard}>
-      <h2>ACCESSO DIPENDENTI</h2>
-      <input style={inputStyle} placeholder="Nickname" value={nick} onChange={(e)=>setNick(e.target.value)} />
-      <button onClick={()=>{ if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); }}>ENTRA</button>
+      <h2>SISTEMA COMUNALE</h2>
+      <input style={inputStyle} placeholder="Inserisci Nickname" value={nick} onChange={(e)=>setNick(e.target.value)} />
+      <button style={submitBtn} onClick={()=>{ if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); else alert("Utente non registrato"); }}>ACCEDI</button>
     </div></div>
   );
 
   const renderModuli = () => {
     switch(pagina) {
       case 'form_nome': return (
-        <div style={formCard}><h2>Cambio Nome</h2>
-          <label style={labStyle}>Vecchio Nome</label><input style={inputStyle} onChange={(e)=>setForm({...form, vecchio_nome: e.target.value})} />
-          <label style={labStyle}>Nuovo Nome</label><input style={inputStyle} onChange={(e)=>setForm({...form, nuovo_nome: e.target.value})} />
-          <button onClick={()=>inviaPratica('anagrafe_nomi', form)} style={submitBtn}>INVIA</button>
+        <div style={formCard}><h2>Cambio Nome/Cognome</h2>
+          <CommonFields />
+          <label style={labStyle}>Vecchio Nome/Cognome</label><input style={inputStyle} onChange={(e)=>setForm({...form, vecchio_nome: e.target.value})} />
+          <label style={labStyle}>Nuovo Nome/Cognome</label><input style={inputStyle} onChange={(e)=>setForm({...form, nuovo_nome: e.target.value})} />
+          <button onClick={()=>inviaPratica('anagrafe_nomi')} style={submitBtn}>INVIA AL DATABASE</button>
         </div>
       );
       case 'form_adozione': return (
-        <div style={formCard}><h2>Adozione</h2>
-          <label style={labStyle}>Nome Figlio</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_figlio: e.target.value})} />
+        <div style={formCard}><h2>Modulo Adozione</h2>
+          <CommonFields />
+          <label style={labStyle}>Nome Figlio/a</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_figlio: e.target.value})} />
           <label style={labStyle}>Nome Padre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_padre: e.target.value})} />
           <label style={labStyle}>Nome Madre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_madre: e.target.value})} />
-          <button onClick={()=>inviaPratica('anagrafe_adozioni', form)} style={submitBtn}>INVIA</button>
+          <button onClick={()=>inviaPratica('anagrafe_adozioni')} style={submitBtn}>INVIA AL DATABASE</button>
         </div>
       );
       case 'form_disconoscimento': return (
-        <div style={formCard}><h2>Disconoscimento</h2>
-          <label style={labStyle}>Nome Figlio</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_figlio: e.target.value})} />
+        <div style={formCard}><h2>Modulo Disconoscimento</h2>
+          <CommonFields />
+          <label style={labStyle}>Nome Figlio/a</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_figlio: e.target.value})} />
           <label style={labStyle}>Nome Padre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_padre: e.target.value})} />
           <label style={labStyle}>Nome Madre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_madre: e.target.value})} />
-          <button onClick={()=>inviaPratica('anagrafe_disconoscimento', form)} style={submitBtn}>INVIA</button>
+          <button onClick={()=>inviaPratica('anagrafe_disconoscimento')} style={submitBtn}>INVIA AL DATABASE</button>
         </div>
       );
       case 'form_divorzio': return (
-        <div style={formCard}><h2>Divorzio</h2>
-          <label style={labStyle}>Nome Coniuge 1</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1: e.target.value})} />
-          <label style={labStyle}>Nome Coniuge 2</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2: e.target.value})} />
-          <button onClick={()=>inviaPratica('anagrafe_divorzi', form)} style={submitBtn}>INVIA</button>
+        <div style={formCard}><h2>Modulo Divorzio</h2>
+          <CommonFields />
+          <label style={labStyle}>Nome Primo Coniuge</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1: e.target.value})} />
+          <label style={labStyle}>Nome Secondo Coniuge</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2: e.target.value})} />
+          <button onClick={()=>inviaPratica('anagrafe_divorzi')} style={submitBtn}>INVIA AL DATABASE</button>
         </div>
       );
       case 'form_unione': return (
         <div style={formCard}><h2>Unione Civile</h2>
-          <label style={labStyle}>Nome Coniuge 1</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1: e.target.value})} />
-          <label style={labStyle}>Nome Coniuge 2</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2: e.target.value})} />
-          <button onClick={()=>inviaPratica('anagrafe_unioni', form)} style={submitBtn}>INVIA</button>
+          <CommonFields />
+          <label style={labStyle}>Nome Primo Coniuge</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1: e.target.value})} />
+          <label style={labStyle}>Nome Secondo Coniuge</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2: e.target.value})} />
+          <button onClick={()=>inviaPratica('anagrafe_unioni')} style={submitBtn}>INVIA AL DATABASE</button>
         </div>
       );
       case 'form_congedo': return (
-        <div style={formCard}><h2>Richiesta Congedo</h2>
-          <label style={labStyle}>Periodo</label><input style={inputStyle} onChange={(e)=>setForm({...form, periodo: e.target.value})} />
+        <div style={formCard}><h2>Richiesta Congedo Dipendenti</h2>
+          <CommonFields />
+          <label style={labStyle}>Periodo Assenza</label><input style={inputStyle} placeholder="Es: dal 10/06 al 15/06" onChange={(e)=>setForm({...form, periodo: e.target.value})} />
           <label style={labStyle}>Motivazione</label><input style={inputStyle} onChange={(e)=>setForm({...form, motivazione: e.target.value})} />
-          <button onClick={()=>inviaPratica('congedi', form)} style={submitBtn}>INVIA RICHIESTA</button>
+          <button onClick={()=>inviaPratica('congedi')} style={submitBtn}>INVIA RICHIESTA</button>
         </div>
       );
       default: return null;
@@ -154,11 +179,11 @@ export default function Page() {
   if (pagina === 'home') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <h1>Dashboard</h1>
+        <h1>Dashboard Principale</h1>
         <div style={gridStyle}>
-          <Card t="Anagrafe" d="Moduli Civili" c="#10b981" onClick={()=>setPagina('menu_anagrafe')} />
-          {can("CONGEDO") && <Card t="Congedo" d="Richiesta Assenza" c="#1e3a8a" onClick={()=>setPagina('form_congedo')} />}
-          {can("ARCHIVIO") && <Card t="Archivio" d="Gestione Pratiche" c="#ef4444" onClick={()=>setPagina('menu_archivio')} />}
+          <Card t="Ufficio Anagrafe" d="Moduli Civili (Nomi, Matrimoni, Adozioni)" c="#10b981" onClick={()=>setPagina('menu_anagrafe')} />
+          {can("CONGEDO") && <Card t="Modulo Congedi" d="Gestione ferie e assenze personale" c="#1e3a8a" onClick={()=>setPagina('form_congedo')} />}
+          {can("ARCHIVIO") && <Card t="Archivio Centrale" d="Storico di tutte le pratiche inviate" c="#ef4444" onClick={()=>setPagina('menu_archivio')} />}
         </div>
       </div>
     </div>
@@ -167,13 +192,13 @@ export default function Page() {
   if (pagina === 'menu_anagrafe') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Home</button>
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Torna Dashboard</button>
         <div style={gridStyle}>
-          {can("CAMBIO_NOME") && <Card t="Cambio Nome" d="Nomi/Cognomi" c="#10b981" onClick={()=>setPagina('form_nome')} />}
-          {can("ADOZIONE") && <Card t="Adozione" d="Nucleo Figli" c="#10b981" onClick={()=>setPagina('form_adozione')} />}
-          {can("DISCONOSCIMENTO") && <Card t="Disconoscimento" d="Legami" c="#059669" onClick={()=>setPagina('form_disconoscimento')} />}
-          {can("DIVORZIO") && <Card t="Divorzio" d="Scioglimento" c="#059669" onClick={()=>setPagina('form_divorzio')} />}
-          {can("UNIONE_CIVILE") && <Card t="Unione Civile" d="Matrimoni" c="#047857" onClick={()=>setPagina('form_unione')} />}
+          {can("CAMBIO_NOME") && <Card t="Cambio Nome" d="Cambio Nomi e Cognomi" c="#10b981" onClick={()=>setPagina('form_nome')} />}
+          {can("ADOZIONE") && <Card t="Adozione" d="Pratiche nuclei familiari" c="#10b981" onClick={()=>setPagina('form_adozione')} />}
+          {can("DISCONOSCIMENTO") && <Card t="Disconoscimento" d="Rottura legami parentali" c="#059669" onClick={()=>setPagina('form_disconoscimento')} />}
+          {can("DIVORZIO") && <Card t="Divorzio" d="Scioglimento coniugale" c="#059669" onClick={()=>setPagina('form_divorzio')} />}
+          {can("UNIONE_CIVILE") && <Card t="Unione Civile" d="Matrimoni e contratti" c="#047857" onClick={()=>setPagina('form_unione')} />}
         </div>
       </div>
     </div>
@@ -182,14 +207,15 @@ export default function Page() {
   if (pagina === 'menu_archivio') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('home')} style={backBtn}>← Home</button>
+        <button onClick={()=>setPagina('home')} style={backBtn}>← Torna Dashboard</button>
+        <h2>Consulta i Registri</h2>
         <div style={gridStyle}>
-          <Card t="Nomi" d="Registro Nomi" c="#10b981" onClick={()=>fetchArchivio('anagrafe_nomi')} />
-          <Card t="Adozioni" d="Registro Adozioni" c="#10b981" onClick={()=>fetchArchivio('anagrafe_adozioni')} />
-          <Card t="Disconoscimenti" d="Registro Disc." c="#059669" onClick={()=>fetchArchivio('anagrafe_disconoscimento')} />
-          <Card t="Divorzi" d="Registro Divorzi" c="#059669" onClick={()=>fetchArchivio('anagrafe_divorzi')} />
-          <Card t="Unioni" d="Registro Unioni" c="#047857" onClick={()=>fetchArchivio('anagrafe_unioni')} />
-          <Card t="Congedi" d="Registro Assenze" c="#1e3a8a" onClick={()=>fetchArchivio('congedi')} />
+          <Card t="Registro Nomi" d="Cambi nomi/cognomi" c="#10b981" onClick={()=>fetchArchivio('anagrafe_nomi')} />
+          <Card t="Registro Adozioni" d="Pratiche adozione" c="#10b981" onClick={()=>fetchArchivio('anagrafe_adozioni')} />
+          <Card t="Registro Disconoscimenti" d="Disconoscimenti figli" c="#059669" onClick={()=>fetchArchivio('anagrafe_disconoscimento')} />
+          <Card t="Registro Divorzi" d="Divorzi registrati" c="#059669" onClick={()=>fetchArchivio('anagrafe_divorzi')} />
+          <Card t="Registro Unioni" d="Unioni civili" c="#047857" onClick={()=>fetchArchivio('anagrafe_unioni')} />
+          <Card t="Registro Congedi" d="Assenze dipendenti" c="#1e3a8a" onClick={()=>fetchArchivio('congedi')} />
         </div>
       </div>
     </div>
@@ -198,7 +224,7 @@ export default function Page() {
   if (pagina.startsWith('form_')) return (
     <div style={pageBg}><Header />
       <div style={{...container, maxWidth:'500px'}}>
-        <button onClick={()=>setPagina(pagina==='form_congedo'?'home':'menu_anagrafe')} style={backBtn}>← Indietro</button>
+        <button onClick={()=>setPagina(pagina==='form_congedo'?'home':'menu_anagrafe')} style={backBtn}>← Annulla e torna indietro</button>
         {renderModuli()}
       </div>
     </div>
@@ -207,10 +233,10 @@ export default function Page() {
   if (pagina === 'visualizza_archivio') return (
     <div style={pageBg}><Header />
       <div style={container}>
-        <button onClick={()=>setPagina('menu_archivio')} style={backBtn}>← Torna Archivio</button>
-        <div style={formCard}><h2>{tabellaCorrente.toUpperCase()}</h2>
-          <table style={{width:'100%', borderCollapse:'collapse', marginTop:'15px'}}>
-            <thead><tr style={{borderBottom:'1px solid #ddd'}}><th style={td}>DATA</th><th style={td}>DIPENDENTE</th><th style={td}>STATO</th></tr></thead>
+        <button onClick={()=>setPagina('menu_archivio')} style={backBtn}>← Torna alla lista registri</button>
+        <div style={formCard}><h2>Tabella: {tabellaCorrente.toUpperCase()}</h2>
+          <table style={{width:'100%', borderCollapse:'collapse', marginTop:'20px'}}>
+            <thead><tr style={{borderBottom:'2px solid #ddd'}}><th style={td}>DATA</th><th style={td}>DIPENDENTE</th><th style={td}>STATO</th></tr></thead>
             <tbody>{archivio.map(i=>(<tr key={i.id} style={{borderBottom:'1px solid #eee'}}><td style={td}>{i.data}</td><td style={td}>{i.nome_dipendente}</td><td style={{...td, color:i.stato==='APPROVATA'?'green':'orange', fontWeight:'bold'}}>{i.stato}</td></tr>))}</tbody>
           </table>
         </div>
@@ -219,22 +245,23 @@ export default function Page() {
   );
 
   if (pagina === 'successo') return (
-    <div style={loginBg}><div style={loginCard}><h2>Inviato! ✅</h2><button onClick={()=>setPagina('home')} style={submitBtn}>HOME</button></div></div>
+    <div style={loginBg}><div style={loginCard}><h2>✅ Operazione Riuscita</h2><p>La pratica è stata inviata con successo.</p><button onClick={()=>setPagina('home')} style={submitBtn}>TORNA IN HOME</button></div></div>
   );
   return null;
 }
 
-const navStyle={background:'#1e3a8a',color:'white',padding:'15px 40px',display:'flex',justifyContent:'space-between',alignItems:'center'};
+const navStyle={background:'#1e3a8a',color:'white',padding:'15px 40px',display:'flex',justifyContent:'space-between',alignItems:'center', boxShadow:'0 2px 10px rgba(0,0,0,0.1)'};
 const loginBg={minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0f172a',fontFamily:'sans-serif'};
-const loginCard={background:'white',padding:'40px',borderRadius:'20px',textAlign:'center',width:'300px'};
+const loginCard={background:'white',padding:'40px',borderRadius:'20px',textAlign:'center',width:'350px'};
 const pageBg={minHeight:'100vh',background:'#f8fafc',fontFamily:'sans-serif'};
 const container={padding:'40px',maxWidth:'1200px',margin:'0 auto'};
-const gridStyle={display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(240px,1fr))',gap:'20px'};
-const formCard={background:'white',padding:'25px',borderRadius:'15px',boxShadow:'0 4px 12px rgba(0,0,0,0.05)'};
-const inputStyle={width:'100%',padding:'10px',marginTop:'5px',marginBottom:'15px',borderRadius:'8px',border:'1px solid #ddd'};
-const labStyle={fontSize:'12px',fontWeight:'bold',color:'#64748b'};
-const submitBtn={width:'100%',padding:'12px',background:'#1e3a8a',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'bold'};
-const logoutBtn={background:'#ef4444',color:'white',border:'none',padding:'8px 12px',borderRadius:'6px',cursor:'pointer'};
-const backBtn={background:'none',border:'none',color:'#1e3a8a',fontWeight:'bold',cursor:'pointer',marginBottom:'10px'};
-const td={padding:'10px', fontSize:'13px', textAlign:'left'};
-function Card({t,d,c,onClick}){return(<div style={{background:'white',padding:'20px',borderRadius:'12px',borderTop:`5px solid ${c}`,boxShadow:'0 4px 10px rgba(0,0,0,0.05)'}}><h3>{t}</h3><p style={{fontSize:'12px',color:'#64748b'}}>{d}</p><button onClick={onClick} style={{width:'100%',padding:'8px',background:c,color:'white',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:'bold'}}>ENTRA</button></div>);}
+const gridStyle={display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(260px,1fr))',gap:'20px'};
+const formCard={background:'white',padding:'30px',borderRadius:'15px',boxShadow:'0 4px 15px rgba(0,0,0,0.08)'};
+const inputStyle={width:'100%',padding:'12px',marginTop:'5px',marginBottom:'15px',borderRadius:'8px',border:'1px solid #cbd5e1', fontSize:'14px', background:'#fff'};
+const labStyle={fontSize:'11px',fontWeight:'bold',color:'#1e3a8a', textTransform:'uppercase', letterSpacing:'0.5px'};
+const submitBtn={width:'100%',padding:'14px',background:'#1e3a8a',color:'white',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'bold', marginTop:'10px', boxShadow:'0 4px 6px rgba(0,0,0,0.1)'};
+const logoutBtn={background:'#ef4444',color:'white',border:'none',padding:'8px 12px',borderRadius:'6px',cursor:'pointer', fontWeight:'bold'};
+const backBtn={background:'none',border:'none',color:'#1e3a8a',fontWeight:'bold',cursor:'pointer',marginBottom:'15px', fontSize:'14px'};
+const td={padding:'12px', fontSize:'13px', textAlign:'left'};
+
+function Card({t,d,c,onClick}){return(<div style={{background:'white',padding:'25px',borderRadius:'15px',borderTop:`6px solid ${c}`,boxShadow:'0 6px 15px rgba(0,0,0,0.05)', transition:'transform 0.2s', cursor:'default'}}><h3>{t}</h3><p style={{fontSize:'13px',color:'#64748b', marginBottom:'20px'}}>{d}</p><button onClick={onClick} style={{width:'100%',padding:'10px',background:c,color:'white',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'bold', fontSize:'12px'}}>APRI SEZIONE</button></div>);}
