@@ -5,6 +5,8 @@ import React, { useState, useEffect } from 'react';
 const SUPABASE_URL = 'https://xvtfdbuomstrpfrojwrg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dGZkYnVvbXN0cnBmcm9qd3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDQ5OTcsImV4cCI6MjA5MDE4MDk5N30.6yt3myNpafxXB12b75vGYMcmLRcGnV1x8a1wA8F4RoI';
 
+const LINK_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1vP6Z-zI_KkIu0rO_3iYwM1z3K-I_N6uS/edit";
+
 const DIPENDENTI = {
   "Paolix09XL": "DIRIGENTE",
   "Gen408patrone": "VICE_DIRIGENTE",
@@ -60,17 +62,6 @@ export default function Page() {
 
   const can = (p) => user && (PERMESSI[user.r] || []).includes(p);
 
-  const inviaDati = async (tabella) => {
-    try {
-      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabella}`, {
-        method: 'POST',
-        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
-        body: JSON.stringify(form)
-      });
-      if (res.ok) { setPagina('successo'); setForm({}); }
-    } catch (e) { alert("Errore invio."); }
-  };
-
   const fetchDati = async (tabella, vista) => {
     setTabellaNome(tabella);
     try {
@@ -80,7 +71,19 @@ export default function Page() {
       const data = await res.json();
       setDatiTabella(data || []);
       setPagina(vista);
-    } catch (e) { alert("Errore caricamento."); }
+    } catch (e) { alert("Errore caricamento archivio."); }
+  };
+
+  const inviaDati = async (tabella) => {
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/${tabella}`, {
+        method: 'POST',
+        headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" },
+        body: JSON.stringify(form)
+      });
+      if (res.ok) { setPagina('successo'); setForm({}); }
+      else { alert("Errore durante l'invio al database."); }
+    } catch (e) { alert("Errore di connessione."); }
   };
 
   if (!user) return (
@@ -116,43 +119,7 @@ export default function Page() {
             <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
             <div style={gridStyle}>
               <Card t="Cambio Data Nascita" d="Correzione Registro" c="#f59e0b" onClick={()=>setPagina('form_cambiodata')} />
-              {can("VIEW_CARTELLONI") && <Card t="Database Cartelloni" d="Visualizza Stato Spazi" c="#f59e0b" onClick={()=>fetchDati('amm_cartelloni', 'vista_cartelloni')} />}
-            </div>
-          </div>
-        )}
-
-        {pagina === 'vista_cartelloni' && (
-          <div style={formCard}>
-            <button onClick={()=>setPagina('menu_amministrativo')} style={backBtn}>← Torna Ufficio</button>
-            <h2 style={{color:'#1e3a8a', marginBottom:'20px'}}>DATABASE CARTELLONI</h2>
-            <div style={{overflowX:'auto'}}>
-              <table style={{width:'100%', borderCollapse:'collapse'}}>
-                <thead>
-                  <tr style={{background:'#f1f5f9', borderBottom:'2px solid #cbd5e1'}}>
-                    <th style={td}>LUOGO</th><th style={td}>COSTO</th><th style={td}>STATO</th><th style={td}>RICHIEDENTE</th><th style={td}>SCADENZA</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datiTabella.map(i => (
-                    <tr key={i.id} style={{borderBottom:'1px solid #e2e8f0'}}>
-                      <td style={td}>{i.luogo}</td>
-                      <td style={td}>€ {i.costo}</td>
-                      <td style={td}>
-                        <span style={{
-                          padding:'4px 10px', borderRadius:'4px', fontSize:'11px', fontWeight:'bold',
-                          background: i.stato === 'occupato' ? '#991b1b' : '#166534',
-                          color: 'white'
-                        }}>{i.stato ? i.stato.toUpperCase() : '-'}</span>
-                      </td>
-                      <td style={td}>{i.richiedente || '-'}</td>
-                      <td style={td}>{i.scadenza || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <div style={{marginTop:'20px', textAlign:'right', fontWeight:'bold', color:'#1e3a8a', fontSize:'18px'}}>
-                TOT: € {datiTabella.reduce((acc, curr) => acc + (Number(curr.costo) || 0), 0).toLocaleString('it-IT')}
-              </div>
+              <Card t="Database Cartelloni" d="Apri Foglio Esterno" c="#f59e0b" onClick={()=>window.open(LINK_CARTELLONI, '_blank')} />
             </div>
           </div>
         )}
@@ -202,7 +169,7 @@ export default function Page() {
               {(pagina==='form_divorzio' || pagina==='form_unione') && (<><label style={labStyle}>Coniuge 1</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1:e.target.value})} /><label style={labStyle}>Coniuge 2</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2:e.target.value})} /></>)}
               {pagina==='form_congedo' && (<><label style={labStyle}>Periodo</label><input style={inputStyle} onChange={(e)=>setForm({...form, periodo:e.target.value})} /><label style={labStyle}>Motivo</label><input style={inputStyle} onChange={(e)=>setForm({...form, motivazione:e.target.value})} /></>)}
               <button style={submitBtn} onClick={() => {
-                const map = { form_nome:'anagrafe_nomi', form_adozione:'anagrafe_adozioni', form_disconoscimento:'anagrafe_disconoscimento', form_divorzio:'anagrafe_divorzi', form_unione:'anagrafe_unioni', form_congedo:'congedi', form_cambiodata:'amm_cambiodata' };
+                const map = { form_nome:'anagrafe_nomi', form_adozione:'anagrafe_adozioni', form_disconoscimento:'anagrafe_disconoscimento', form_divorzio:'anagrafe_divorzi', form_unione:'anagrafe_unioni', form_congedi:'congedi', form_congedo:'congedi', form_cambiodata:'amm_cambiodata' };
                 inviaDati(map[pagina]);
               }}>INVIA</button>
             </div>
@@ -226,8 +193,8 @@ export default function Page() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datiTabella.map(i => (
-                    <tr key={i.id} style={{borderBottom:'1px solid #eee'}}>
+                  {datiTabella.map((i, index) => (
+                    <tr key={index} style={{borderBottom:'1px solid #eee'}}>
                       <td style={td}>{i.data}</td><td style={td}>{i.nome_dipendente}</td>
                       {tabellaNome === 'amm_cambiodata' && <><td style={td}>{i.nome_cliente}</td><td style={td}>{i.datanascita_vecchia}</td><td style={td}>{i.datanascita_nuova}</td></>}
                       {tabellaNome === 'anagrafe_nomi' && <><td style={td}>{i.vecchio_nome}</td><td style={td}>{i.nuovo_nome}</td></>}
