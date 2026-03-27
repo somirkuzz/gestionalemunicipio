@@ -5,7 +5,7 @@ import React, { useState, useEffect } from 'react';
 const SUPABASE_URL = 'https://xvtfdbuomstrpfrojwrg.supabase.co';
 const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2dGZkYnVvbXN0cnBmcm9qd3JnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzQ2MDQ5OTcsImV4cCI6MjA5MDE4MDk5N30.6yt3myNpafxXB12b75vGYMcmLRcGnV1x8a1wA8F4RoI';
 
-const LINK_GOOGLE_SHEETS = "https://docs.google.com/spreadsheets/d/1vP6Z-zI_KkIu0rO_3iYwM1z3K-I_N6uS/edit";
+const LINK_CARTELLONI = "https://docs.google.com/spreadsheets/d/1vP6Z-zI_KkIu0rO_3iYwM1z3K-I_N6uS/edit";
 
 const DIPENDENTI = {
   "Paolix09XL": "DIRIGENTE",
@@ -69,9 +69,9 @@ export default function Page() {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
       });
       const data = await res.json();
-      setDatiTabella(data || []);
+      setDatiTabella(Array.isArray(data) ? data : []);
       setPagina(vista);
-    } catch (e) { alert("Errore caricamento archivio."); }
+    } catch (e) { alert("Errore nel caricamento dell'archivio."); }
   };
 
   const inviaDati = async (tabella) => {
@@ -82,7 +82,7 @@ export default function Page() {
         body: JSON.stringify(form)
       });
       if (res.ok) { setPagina('successo'); setForm({}); }
-      else { alert("Errore durante l'invio al database."); }
+      else { alert("Errore nell'invio dei dati."); }
     } catch (e) { alert("Errore di connessione."); }
   };
 
@@ -119,7 +119,7 @@ export default function Page() {
             <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
             <div style={gridStyle}>
               <Card t="Cambio Data Nascita" d="Correzione Registro" c="#f59e0b" onClick={()=>setPagina('form_cambiodata')} />
-              <Card t="Database Cartelloni" d="Apri Foglio Esterno" c="#f59e0b" onClick={()=>window.open(LINK_CARTELLONI, '_blank')} />
+              <Card t="Database Cartelloni" d="Apri Foglio Google" c="#f59e0b" onClick={() => window.open(LINK_CARTELLONI, '_blank')} />
             </div>
           </div>
         )}
@@ -141,17 +141,13 @@ export default function Page() {
           <div>
             <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
             <div style={gridStyle}>
-              {can("ANAGRAFE") && (
-                <>
-                  <Card t="Registro Nomi" d="Storico" c="#ef4444" onClick={()=>fetchDati('anagrafe_nomi', 'visualizza_archivio')} />
-                  <Card t="Registro Adozioni" d="Storico" c="#ef4444" onClick={()=>fetchDati('anagrafe_adozioni', 'visualizza_archivio')} />
-                  <Card t="Registro Disc." d="Storico" c="#ef4444" onClick={()=>fetchDati('anagrafe_disconoscimento', 'visualizza_archivio')} />
-                  <Card t="Registro Divorzi" d="Storico" c="#ef4444" onClick={()=>fetchDati('anagrafe_divorzi', 'visualizza_archivio')} />
-                  <Card t="Registro Unioni" d="Storico" c="#ef4444" onClick={()=>fetchDati('anagrafe_unioni', 'visualizza_archivio')} />
-                </>
-              )}
-              {can("AMMINISTRAZIONE") && <Card t="Registro Cambio Data" d="Storico" c="#f59e0b" onClick={()=>fetchDati('amm_cambiodata', 'visualizza_archivio')} />}
-              <Card t="Registro Congedi" d="Storico" c="#1e3a8a" onClick={()=>fetchDati('congedi', 'visualizza_archivio')} />
+              <Card t="Registro Nomi" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_nomi', 'visualizza_archivio')} />
+              <Card t="Registro Adozioni" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_adozioni', 'visualizza_archivio')} />
+              <Card t="Registro Disc." d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_disconoscimento', 'visualizza_archivio')} />
+              <Card t="Registro Divorzi" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_divorzi', 'visualizza_archivio')} />
+              <Card t="Registro Unioni" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_unioni', 'visualizza_archivio')} />
+              <Card t="Registro Cambio Data" d="Archivio" c="#f59e0b" onClick={()=>fetchDati('amm_cambiodata', 'visualizza_archivio')} />
+              <Card t="Registro Congedi" d="Archivio" c="#1e3a8a" onClick={()=>fetchDati('congedi', 'visualizza_archivio')} />
             </div>
           </div>
         )}
@@ -169,7 +165,7 @@ export default function Page() {
               {(pagina==='form_divorzio' || pagina==='form_unione') && (<><label style={labStyle}>Coniuge 1</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1:e.target.value})} /><label style={labStyle}>Coniuge 2</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2:e.target.value})} /></>)}
               {pagina==='form_congedo' && (<><label style={labStyle}>Periodo</label><input style={inputStyle} onChange={(e)=>setForm({...form, periodo:e.target.value})} /><label style={labStyle}>Motivo</label><input style={inputStyle} onChange={(e)=>setForm({...form, motivazione:e.target.value})} /></>)}
               <button style={submitBtn} onClick={() => {
-                const map = { form_nome:'anagrafe_nomi', form_adozione:'anagrafe_adozioni', form_disconoscimento:'anagrafe_disconoscimento', form_divorzio:'anagrafe_divorzi', form_unione:'anagrafe_unioni', form_congedi:'congedi', form_congedo:'congedi', form_cambiodata:'amm_cambiodata' };
+                const map = { form_nome:'anagrafe_nomi', form_adozione:'anagrafe_adozioni', form_disconoscimento:'anagrafe_disconoscimento', form_divorzio:'anagrafe_divorzi', form_unione:'anagrafe_unioni', form_congedo:'congedi', form_cambiodata:'amm_cambiodata' };
                 inviaDati(map[pagina]);
               }}>INVIA</button>
             </div>
@@ -193,7 +189,7 @@ export default function Page() {
                   </tr>
                 </thead>
                 <tbody>
-                  {datiTabella.map((i, index) => (
+                  {datiTabella.length > 0 ? datiTabella.map((i, index) => (
                     <tr key={index} style={{borderBottom:'1px solid #eee'}}>
                       <td style={td}>{i.data}</td><td style={td}>{i.nome_dipendente}</td>
                       {tabellaNome === 'amm_cambiodata' && <><td style={td}>{i.nome_cliente}</td><td style={td}>{i.datanascita_vecchia}</td><td style={td}>{i.datanascita_nuova}</td></>}
@@ -202,7 +198,7 @@ export default function Page() {
                       {(tabellaNome === 'anagrafe_unioni' || tabellaNome === 'anagrafe_divorzi') && <><td style={td}>{i.nome_coniuge1}</td><td style={td}>{i.nome_coniuge2}</td></>}
                       {tabellaNome === 'congedi' && <><td style={td}>{i.periodo}</td><td style={td}>{i.motivazione}</td></>}
                     </tr>
-                  ))}
+                  )) : <tr><td colSpan="6" style={{padding:'20px', textAlign:'center'}}>Nessun record trovato.</td></tr>}
                 </tbody>
               </table>
             </div>
