@@ -1,0 +1,12 @@
+export const metadata = {
+  title: 'Gestionale Municipio Atlantis',
+  description: 'Sistema interno dipendenti',
+}
+
+export default function RootLayout({ children }) {
+  return (
+    <html lang="it">
+      <body style={{ margin: 0, padding: 0 }}>{children}</body>
+    </html>
+  )
+}
