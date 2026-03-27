@@ -69,7 +69,7 @@ export default function Page() {
         headers: { "apikey": SUPABASE_KEY, "Authorization": `Bearer ${SUPABASE_KEY}` }
       });
       const data = await res.json();
-      setDatiTabella(Array.isArray(data) ? data : []);
+      setDatiTabella(data || []);
       setPagina(vista);
     } catch (e) { alert("Errore nel caricamento dell'archivio."); }
   };
@@ -82,8 +82,8 @@ export default function Page() {
         body: JSON.stringify(form)
       });
       if (res.ok) { setPagina('successo'); setForm({}); }
-      else { alert("Errore nell'invio dei dati."); }
-    } catch (e) { alert("Errore di connessione."); }
+      else { const err = await res.json(); alert("Errore: " + err.message); }
+    } catch (e) { alert("Errore invio dati."); }
   };
 
   if (!user) return (
@@ -96,101 +96,103 @@ export default function Page() {
 
   return (
     <div style={pageBg}>
+      {/* Navbar scura fedele all'immagine */}
       <nav style={navStyle}>
-        <h2 onClick={() => setPagina('home')} style={{cursor:'pointer', margin:0}}>MUNICIPIO ATLANTIS</h2>
+        <h2 onClick={() => setPagina('home')} style={{cursor:'pointer', margin:0, fontSize:'18px'}}>PORTALE MUNICIPIO</h2>
         <div style={{display:'flex', alignItems:'center', gap:'15px'}}>
-          <div style={{textAlign:'right'}}><b style={{fontSize:'14px'}}>{user.n}</b><br/><small style={{fontSize:'10px'}}>{user.r.replace(/_/g, ' ')}</small></div>
-          <button onClick={()=>setUser(null)} style={logoutBtn}>LOGOUT</button>
+          <span style={roleBadge}>{user.r.replace(/_/g, ' ')}</span>
+          <button onClick={()=>setUser(null)} style={logoutBtnNav}>Esci</button>
         </div>
       </nav>
 
       <div style={container}>
+        {/* Banner Area Dirigenziale */}
+        {can("DIRIGENZA_BANNER") && pagina === 'home' && (
+          <div style={dirigenzaBanner}>
+            <h3 style={{color:'#991b1b', marginTop:0}}>AREA DIRIGENZIALE</h3>
+            <p style={{color:'#475569', fontSize:'14px'}}>Hai accesso alla visualizzazione di tutti i moduli inviati dai cittadini e dipendenti.</p>
+            <button onClick={()=>setPagina('menu_archivio')} style={dirigenzaBtn}>VAI ALL'ARCHIVIO MODULI →</button>
+          </div>
+        )}
+
         {pagina === 'home' && (
-          <div style={gridStyle}>
-            {can("ANAGRAFE") && <Card t="Ufficio Anagrafe" d="Moduli Civili" c="#10b981" onClick={()=>setPagina('menu_anagrafe')} />}
-            {can("AMMINISTRAZIONE") && <Card t="Ufficio Amministrativo" d="Gestione Interna" c="#f59e0b" onClick={()=>setPagina('menu_amministrativo')} />}
-            {can("CONGEDO") && <Card t="Modulo Congedi" d="Gestione Ferie" c="#1e3a8a" onClick={()=>setPagina('form_congedo')} />}
-            {can("ARCHIVIO") && <Card t="Archivio Centrale" d="Storico Registri" c="#ef4444" onClick={()=>setPagina('menu_archivio')} />}
-          </div>
-        )}
-
-        {pagina === 'menu_amministrativo' && (
           <div>
-            <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
+            <h2 style={sectionTitle}>Modulistica Disponibile</h2>
             <div style={gridStyle}>
-              <Card t="Cambio Data Nascita" d="Correzione Registro" c="#f59e0b" onClick={()=>setPagina('form_cambiodata')} />
-              <Card t="Database Cartelloni" d="Apri Foglio Google" c="#f59e0b" onClick={() => window.open(LINK_CARTELLONI, '_blank')} />
+              {can("CONGEDO") && <FormCard t="Modulo Congedo" d="Richiesta ferie/permessi per tutti i gradi." c="#1e3a8a" onClick={()=>setPagina('form_congedo')} />}
+              {can("ANAGRAFE") && <>
+                <FormCard t="Cambio Nome/Cognome" d="Gestione cambio identità anagrafica." c="#10b981" onClick={()=>setPagina('form_nome')} />
+                <FormCard t="Modulo Adozione" d="Registrazione nuovi legami parentali." c="#f59e0b" onClick={()=>setPagina('form_adozione')} />
+                <FormCard t="Disconoscimento" d="Pratica per cessazione legami parentali." c="#f59e0b" onClick={()=>setPagina('form_disconoscimento')} />
+                <FormCard t="Modulo Divorzio" d="Cessazione legale del matrimonio." c="#ef4444" onClick={()=>setPagina('form_divorzio')} />
+                <FormCard t="Unione Civile" d="Registrazione atti di matrimonio." c="#8b5cf6" onClick={()=>setPagina('form_unione')} />
+              </>}
+              {can("AMMINISTRAZIONE") && <FormCard t="Cambio Data" d="Modifica dati cronologici e registri." c="#f59e0b" onClick={()=>setPagina('form_cambiodata')} />}
+              {can("AMMINISTRAZIONE") && <FormCard t="Database Cartelloni" d="Visualizza stato spazi e rendite." c="#f59e0b" onClick={() => window.open(LINK_GOOGLE_SHEETS, '_blank')} />}
             </div>
           </div>
         )}
 
-        {pagina === 'menu_anagrafe' && (
-          <div>
-            <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
-            <div style={gridStyle}>
-              <Card t="Cambio Nome" d="Anagrafe" c="#10b981" onClick={()=>setPagina('form_nome')} />
-              <Card t="Adozione" d="Anagrafe" c="#10b981" onClick={()=>setPagina('form_adozione')} />
-              <Card t="Disconoscimento" d="Anagrafe" c="#059669" onClick={()=>setPagina('form_disconoscimento')} />
-              <Card t="Divorzio" d="Anagrafe" c="#059669" onClick={()=>setPagina('form_divorzio')} />
-              <Card t="Unione Civile" d="Anagrafe" c="#047857" onClick={()=>setPagina('form_unione')} />
-            </div>
-          </div>
-        )}
-
+        {/* ... Restanti menu, archivio e form (con stili aggiornati) ... */}
         {pagina === 'menu_archivio' && (
           <div>
             <button onClick={()=>setPagina('home')} style={backBtn}>← Indietro</button>
+            <h2 style={sectionTitle}>Archivio Centrale Registri</h2>
             <div style={gridStyle}>
-              <Card t="Registro Nomi" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_nomi', 'visualizza_archivio')} />
-              <Card t="Registro Adozioni" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_adozioni', 'visualizza_archivio')} />
-              <Card t="Registro Disc." d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_disconoscimento', 'visualizza_archivio')} />
-              <Card t="Registro Divorzi" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_divorzi', 'visualizza_archivio')} />
-              <Card t="Registro Unioni" d="Archivio" c="#ef4444" onClick={()=>fetchDati('anagrafe_unioni', 'visualizza_archivio')} />
-              <Card t="Registro Cambio Data" d="Archivio" c="#f59e0b" onClick={()=>fetchDati('amm_cambiodata', 'visualizza_archivio')} />
-              <Card t="Registro Congedi" d="Archivio" c="#1e3a8a" onClick={()=>fetchDati('congedi', 'visualizza_archivio')} />
+              {can("ANAGRAFE") && <>
+                <FormCard t="Registro Nomi" d="Storico cambi nomi." c="#ef4444" onClick={()=>fetchDati('anagrafe_nomi', 'visualizza_archivio')} />
+                <FormCard t="Registro Adozioni" d="Storico atti adozione." c="#ef4444" onClick={()=>fetchDati('anagrafe_adozioni', 'visualizza_archivio')} />
+                <FormCard t="Registro Disc." d="Storico disconoscimenti." c="#ef4444" onClick={()=>fetchDati('anagrafe_disconoscimento', 'visualizza_archivio')} />
+                <FormCard t="Registro Divorzi" d="Storico atti divorzio." c="#ef4444" onClick={()=>fetchDati('anagrafe_divorzi', 'visualizza_archivio')} />
+                <FormCard t="Registro Unioni" d="Storico unioni civili." c="#ef4444" onClick={()=>fetchDati('anagrafe_unioni', 'visualizza_archivio')} />
+              </>}
+              {can("AMMINISTRAZIONE") && <FormCard t="Registro Cambio Data" d="Storico modifiche date." c="#f59e0b" onClick={()=>fetchDati('amm_cambiodata', 'visualizza_archivio')} />}
+              <CardCongedi t="Registro Congedi" d="Storico ferie dipendenti." c="#1e3a8a" onClick={()=>fetchDati('congedi', 'visualizza_archivio')} />
             </div>
           </div>
         )}
 
         {pagina.startsWith('form_') && (
-          <div style={{maxWidth:'500px', margin:'0 auto'}}>
-            <button onClick={()=>setPagina(pagina==='form_cambiodata'?'menu_amministrativo':pagina==='form_congedo'?'home':'menu_anagrafe')} style={backBtn}>← Annulla</button>
-            <div style={formCard}>
-              <h2 style={{marginTop:0, color:'#1e3a8a'}}>{pagina.replace('form_','').replace('_',' ').toUpperCase()}</h2>
-              <label style={labStyle}>Data</label><input style={inputStyle} value={form.data || ''} readOnly />
-              <label style={labStyle}>Operatore</label><input style={inputStyle} value={form.nome_dipendente || ''} readOnly />
-              {pagina==='form_cambiodata' && (<><label style={labStyle}>Cliente</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_cliente:e.target.value})} /><label style={labStyle}>Data Vecchia</label><input style={inputStyle} onChange={(e)=>setForm({...form, datanascita_vecchia:e.target.value})} /><label style={labStyle}>Data Nuova</label><input style={inputStyle} onChange={(e)=>setForm({...form, datanascita_nuova:e.target.value})} /><label style={labStyle}>Motivo</label><textarea style={inputStyle} onChange={(e)=>setForm({...form, motivo:e.target.value})} /></>)}
-              {pagina==='form_nome' && (<><label style={labStyle}>Vecchio Nome</label><input style={inputStyle} onChange={(e)=>setForm({...form, vecchio_nome:e.target.value})} /><label style={labStyle}>Nuovo Nome</label><input style={inputStyle} onChange={(e)=>setForm({...form, nuovo_nome:e.target.value})} /></>)}
-              {(pagina==='form_adozione' || pagina==='form_disconoscimento') && (<><label style={labStyle}>Figlio</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_figlio:e.target.value})} /><label style={labStyle}>Padre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_padre:e.target.value})} /><label style={labStyle}>Madre</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_madre:e.target.value})} /></>)}
-              {(pagina==='form_divorzio' || pagina==='form_unione') && (<><label style={labStyle}>Coniuge 1</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge1:e.target.value})} /><label style={labStyle}>Coniuge 2</label><input style={inputStyle} onChange={(e)=>setForm({...form, nome_coniuge2:e.target.value})} /></>)}
-              {pagina==='form_congedo' && (<><label style={labStyle}>Periodo</label><input style={inputStyle} onChange={(e)=>setForm({...form, periodo:e.target.value})} /><label style={labStyle}>Motivo</label><input style={inputStyle} onChange={(e)=>setForm({...form, motivazione:e.target.value})} /></>)}
-              <button style={submitBtn} onClick={() => {
+          <div style={{maxWidth:'600px', margin:'0 auto'}}>
+            <button onClick={()=>setPagina('home')} style={backBtn}>← Annulla</button>
+            <div style={formCardStyle}>
+              <h2 style={{marginTop:0, color:'#1e3a8a', textTransform:'uppercase', fontSize:'18px'}}>{pagina.replace('form_','').replace('_',' ')}</h2>
+              <div style={divider}></div>
+              <label style={labStyle}>Data Pratica</label><input style={inputStyleForm} value={form.data || ''} readOnly />
+              <label style={labStyle}>Nome Operatore</label><input style={inputStyleForm} value={form.nome_dipendente || ''} readOnly />
+              {pagina==='form_cambiodata' && (<><label style={labStyle}>Cliente</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_cliente:e.target.value})} /><label style={labStyle}>Data Vecchia</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, datanascita_vecchia:e.target.value})} /><label style={labStyle}>Data Nuova</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, datanascita_nuova:e.target.value})} /><label style={labStyle}>Motivo</label><textarea style={textareaStyle} onChange={(e)=>setForm({...form, motivo:e.target.value})} /></>)}
+              {pagina==='form_nome' && (<><label style={labStyle}>Vecchio Nome</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, vecchio_nome:e.target.value})} /><label style={labStyle}>Nuovo Nome</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nuovo_nome:e.target.value})} /></>)}
+              {(pagina==='form_adozione' || pagina==='form_disconoscimento') && (<><label style={labStyle}>Figlio</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_figlio:e.target.value})} /><label style={labStyle}>Padre</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_padre:e.target.value})} /><label style={labStyle}>Madre</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_madre:e.target.value})} /></>)}
+              {(pagina==='form_divorzio' || pagina==='form_unione') && (<><label style={labStyle}>Coniuge 1</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_coniuge1:e.target.value})} /><label style={labStyle}>Coniuge 2</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, nome_coniuge2:e.target.value})} /></>)}
+              {pagina==='form_congedo' && (<><label style={labStyle}>Periodo</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, periodo:e.target.value})} /><label style={labStyle}>Motivo</label><input style={inputStyleForm} onChange={(e)=>setForm({...form, motivazione:e.target.value})} /></>)}
+              <button style={submitBtnForm} onClick={() => {
                 const map = { form_nome:'anagrafe_nomi', form_adozione:'anagrafe_adozioni', form_disconoscimento:'anagrafe_disconoscimento', form_divorzio:'anagrafe_divorzi', form_unione:'anagrafe_unioni', form_congedo:'congedi', form_cambiodata:'amm_cambiodata' };
                 inviaDati(map[pagina]);
-              }}>INVIA</button>
+              }}>INVIA MODULO</button>
             </div>
           </div>
         )}
 
         {pagina === 'visualizza_archivio' && (
-          <div style={formCard}>
+          <div style={formCardStyle}>
             <button onClick={()=>setPagina('menu_archivio')} style={backBtn}>← Torna Registri</button>
-            <h2 style={{color:'#1e3a8a'}}>{tabellaNome.toUpperCase()}</h2>
+            <h2 style={{color:'#1e3a8a', textTransform:'uppercase'}}>{tabellaNome.replace('_',' ')}</h2>
+            <div style={divider}></div>
             <div style={{overflowX:'auto'}}>
               <table style={{width:'100%', borderCollapse:'collapse', marginTop:'15px'}}>
                 <thead>
-                  <tr style={{borderBottom:'2px solid #ddd', background:'#f1f5f9'}}>
-                    <th style={td}>DATA</th><th style={td}>OPERATORE</th>
-                    {tabellaNome === 'amm_cambiodata' && <><th style={td}>CLIENTE</th><th style={td}>VECCHIA</th><th style={td}>NUOVA</th></>}
-                    {tabellaNome === 'anagrafe_nomi' && <><th style={td}>VECCHIO</th><th style={td}>NUOVO</th></>}
-                    {(tabellaNome === 'anagrafe_adozioni' || tabellaNome === 'anagrafe_disconoscimento') && <><th style={td}>FIGLIO</th><th style={td}>PADRE</th><th style={td}>MADRE</th></>}
-                    {(tabellaNome === 'anagrafe_unioni' || tabellaNome === 'anagrafe_divorzi') && <><th style={td}>CONIUGE 1</th><th style={td}>CONIUGE 2</th></>}
-                    {tabellaNome === 'congedi' && <><th style={td}>PERIODO</th><th style={td}>MOTIVO</th></>}
+                  <tr style={{borderBottom:'2px solid #e2e8f0', background:'#f8fafc'}}>
+                    <th style={tdHead}>DATA</th><th style={tdHead}>OPERATORE</th>
+                    {tabellaNome === 'amm_cambiodata' && <><th style={tdHead}>CLIENTE</th><th style={tdHead}>VECCHIA</th><th style={tdHead}>NUOVA</th></>}
+                    {tabellaNome === 'anagrafe_nomi' && <><th style={tdHead}>VECCHIO</th><th style={tdHead}>NUOVO</th></>}
+                    {(tabellaNome === 'anagrafe_adozioni' || tabellaNome === 'anagrafe_disconoscimento') && <><th style={tdHead}>FIGLIO</th><th style={tdHead}>PADRE</th><th style={tdHead}>MADRE</th></>}
+                    {(tabellaNome === 'anagrafe_unioni' || tabellaNome === 'anagrafe_divorzi') && <><th style={tdHead}>CONIUGE 1</th><th style={tdHead}>CONIUGE 2</th></>}
+                    {tabellaNome === 'congedi' && <><th style={tdHead}>PERIODO</th><th style={tdHead}>MOTIVO</th></>}
                   </tr>
                 </thead>
                 <tbody>
                   {datiTabella.length > 0 ? datiTabella.map((i, index) => (
-                    <tr key={index} style={{borderBottom:'1px solid #eee'}}>
+                    <tr key={index} style={trBody}>
                       <td style={td}>{i.data}</td><td style={td}>{i.nome_dipendente}</td>
                       {tabellaNome === 'amm_cambiodata' && <><td style={td}>{i.nome_cliente}</td><td style={td}>{i.datanascita_vecchia}</td><td style={td}>{i.datanascita_nuova}</td></>}
                       {tabellaNome === 'anagrafe_nomi' && <><td style={td}>{i.vecchio_nome}</td><td style={td}>{i.nuovo_nome}</td></>}
@@ -198,32 +200,52 @@ export default function Page() {
                       {(tabellaNome === 'anagrafe_unioni' || tabellaNome === 'anagrafe_divorzi') && <><td style={td}>{i.nome_coniuge1}</td><td style={td}>{i.nome_coniuge2}</td></>}
                       {tabellaNome === 'congedi' && <><td style={td}>{i.periodo}</td><td style={td}>{i.motivazione}</td></>}
                     </tr>
-                  )) : <tr><td colSpan="6" style={{padding:'20px', textAlign:'center'}}>Nessun record trovato.</td></tr>}
+                  )) : <tr><td colSpan="6" style={{padding:'30px', textAlign:'center', color:'#64748b'}}>Nessun record trovato in questo registro.</td></tr>}
                 </tbody>
               </table>
             </div>
           </div>
         )}
 
-        {pagina === 'successo' && <div style={{textAlign:'center'}}><div style={formCard}><h2>✅ Operazione Riuscita</h2><button onClick={()=>setPagina('home')} style={submitBtn}>TORNA IN HOME</button></div></div>}
+        {pagina === 'successo' && <div style={{textAlign:'center'}}><div style={formCardStyle}><h2>✅ Operazione Riuscita</h2><button onClick={()=>setPagina('home')} style={submitBtnForm}>TORNA IN HOME</button></div></div>}
       </div>
     </div>
   );
 }
 
-// STILI
-const navStyle={background:'#1e3a8a',color:'white',padding:'15px 40px',display:'flex',justifyContent:'space-between',alignItems:'center'};
+// NUOVI STILI REPLICATI DALL'IMMAGINE
+const navStyle={background:'#1e3a8a',color:'white',padding:'10px 30px',display:'flex',justifyContent:'space-between',alignItems:'center',fontFamily:'"Helvetica Neue",Helvetica,Arial,sans-serif'};
+const roleBadge={background:'#be123c',color:'white',padding:'5px 10px',borderRadius:'4px',fontSize:'12px',fontWeight:'bold',textTransform:'uppercase'};
+const logoutBtnNav={background:'#e11d48',color:'white',border:'none',padding:'6px 15px',borderRadius:'4px',cursor:'pointer',fontWeight:'bold',fontSize:'12px'};
 const loginBg={minHeight:'100vh',display:'flex',alignItems:'center',justifyContent:'center',background:'#0f172a', fontFamily:'sans-serif'};
-const loginCard={background:'white',padding:'40px',borderRadius:'20px',textAlign:'center',width:'300px'};
-const pageBg={minHeight:'100vh',background:'#f8fafc', fontFamily:'sans-serif'};
-const container={padding:'40px',maxWidth:'1200px',margin:'0 auto'};
-const gridStyle={display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(250px,1fr))',gap:'20px', marginTop:'20px'};
-const formCard={background:'white',padding:'30px',borderRadius:'15px',boxShadow:'0 4px 15px rgba(0,0,0,0.05)'};
-const inputStyle={width:'100%',padding:'12px',marginBottom:'15px',borderRadius:'8px',border:'1px solid #cbd5e1', fontSize:'14px', boxSizing:'border-box'};
-const labStyle={fontSize:'11px',fontWeight:'bold',color:'#1e3a8a', textTransform:'uppercase', marginBottom:'5px', display:'block'};
-const submitBtn={width:'100%',padding:'14px',background:'#1e3a8a',color:'white',border:'none',borderRadius:'8px',cursor:'pointer', fontWeight:'bold'};
-const logoutBtn={background:'#ef4444',color:'white',border:'none',padding:'8px 12px',borderRadius:'6px',cursor:'pointer', fontWeight:'bold', fontSize:'12px'};
-const backBtn={background:'none',border:'none',color:'#1e3a8a',fontWeight:'bold',cursor:'pointer',marginBottom:'15px'};
-const td={padding:'12px', textAlign:'left', fontSize:'12px', color:'#334155'};
+const loginCard={background:'white',padding:'40px',borderRadius:'12px',textAlign:'center',width:'320px',boxShadow:'0 10px 25px rgba(0,0,0,0.2)'};
+const inputStyle={width:'100%',padding:'12px',marginBottom:'15px',borderRadius:'6px',border:'1px solid #cbd5e1', fontSize:'14px', boxSizing:'border-box'};
+const submitBtn={width:'100%',padding:'12px',background:'#1e3a8a',color:'white',border:'none',borderRadius:'6px',cursor:'pointer', fontWeight:'bold'};
+const pageBg={minHeight:'100vh',background:'#f1f5f9', fontFamily:'sans-serif'};
+const container={padding:'30px 50px',maxWidth:'1400px',margin:'0 auto'};
 
-function Card({t,d,c,onClick}){return(<div style={{background:'white',padding:'25px',borderRadius:'15px',borderTop:`6px solid ${c}`,boxShadow:'0 4px 12px rgba(0,0,0,0.05)'}}><h3>{t}</h3><p style={{fontSize:'13px',color:'#64748b'}}>{d}</p><button onClick={onClick} style={{width:'100%',padding:'10px',background:c,color:'white',border:'none',borderRadius:'8px',cursor:'pointer',fontWeight:'bold'}}>APRI</button></div>);}
+// Banner dirigenziale rosso
+const dirigenzaBanner={background:'#fee2e2',border:'2px solid #fecaca',padding:'20px',borderRadius:'8px',marginBottom:'30px',boxShadow:'0 4px 6px rgba(0,0,0,0.05)'};
+const dirigenzaBtn={background:'#be123c',color:'white',border:'none',padding:'10px 20px',borderRadius:'6px',cursor:'pointer',fontWeight:'bold',fontSize:'13px'};
+
+const sectionTitle={fontSize:'18px',color:'#1e3a8a',marginBottom:'15px',paddingBottom:'10px',borderBottom:'2px solid #1e3a8a',display:'inline-block'};
+const gridStyle={display:'grid',gridTemplateColumns:'repeat(auto-fill,minmax(280px,1fr))',gap:'20px'};
+
+// Card moduli con bordo sinistro colorato
+function FormCard({t,d,c,onClick}){return(<div style={{background:'white',padding:'20px',borderRadius:'8px',borderLeft:`6px solid ${c}`,boxShadow:'0 2px 5px rgba(0,0,0,0.05)',display:'flex',flexDirection:'column',justifyContent:'space-between'}}><div><h3 style={{marginTop:0,fontSize:'16px',color:'#1e293b'}}>{t}</h3><p style={{fontSize:'13px',color:'#64748b',marginBottom:'15px'}}>{d}</p></div><button onClick={onClick} style={{width:'100%',padding:'8px',background:'white',color:'#1e3a8a',border:'1px solid #cbd5e1',borderRadius:'6px',cursor:'pointer',fontWeight:'bold',fontSize:'12px',textTransform:'uppercase'}}>APRI</button></div>);}
+
+function CardCongedi({t,d,c,onClick}){return(<div style={{background:'white',padding:'20px',borderRadius:'8px',borderLeft:`6px solid ${c}`,boxShadow:'0 2px 5px rgba(0,0,0,0.05)',display:'flex',flexDirection:'column',justifyContent:'space-between'}}><div><h3 style={{marginTop:0,fontSize:'16px',color:'#1e293b'}}>{t}</h3><p style={{fontSize:'13px',color:'#64748b',marginBottom:'15px'}}>{d}</p></div><button onClick={onClick} style={{width:'100%',padding:'8px',background:'white',color:'#1e3a8a',border:'1px solid #cbd5e1',borderRadius:'6px',cursor:'pointer',fontWeight:'bold',fontSize:'12px',textTransform:'uppercase'}}>APRI ARCHIVIO</button></div>);}
+
+const backBtn={background:'none',border:'none',color:'#be123c',fontWeight:'bold',cursor:'pointer',marginBottom:'15px',fontSize:'13px'};
+
+// Stili form e tabelle
+const formCardStyle={background:'white',padding:'30px',borderRadius:'12px',boxShadow:'0 5px 15px rgba(0,0,0,0.05)'};
+const divider={height:'2px',background:'#e2e8f0',margin:'15px 0'};
+const labStyle={fontSize:'11px',fontWeight:'bold',color:'#475569',textTransform:'uppercase',marginBottom:'5px',display:'block'};
+const inputStyleForm={width:'100%',padding:'10px',marginBottom:'15px',borderRadius:'6px',border:'1px solid #e2e8f0',fontSize:'14px',boxSizing:'border-box',background:'#f8fafc'};
+const textareaStyle={width:'100%',height:'80px',padding:'10px',marginBottom:'15px',borderRadius:'6px',border:'1px solid #e2e8f0',fontSize:'14px',boxSizing:'border-box',background:'#f8fafc',resize:'vertical'};
+const submitBtnForm={width:'100%',padding:'12px',background:'#1e3a8a',color:'white',border:'none',borderRadius:'6px',cursor:'pointer',fontWeight:'bold',textTransform:'uppercase',fontSize:'13px',marginTop:'10px'};
+
+const tdHead={padding:'12px 15px',textAlign:'left',fontSize:'11px',fontWeight:'bold',color:'#475569',textTransform:'uppercase'};
+const trBody={borderBottom:'1px solid #f1f5f9'};
+const td={padding:'12px 15px',textAlign:'left',fontSize:'13px',color:'#1e293b'};
