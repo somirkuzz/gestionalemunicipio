@@ -47,149 +47,138 @@ const PERMESSI = {
 export default function Page() {
   const [user, setUser] = useState(null);
   const [nick, setNick] = useState('');
-  const [err, setErr] = useState(false);
-  const [paginaAttiva, setPaginaAttiva] = useState('dashboard'); 
+  const [pagina, setPagina] = useState('dashboard'); 
   const [pratiche, setPratiche] = useState([]);
-  const [form, setForm] = useState({ nome_lore: '', periodo: '', motivazione: '' });
+  const [form, setForm] = useState({ lore: '', tempo: '', motivo: '' });
 
-  // --- CARICA PRATICHE NELL'ARCHIVIO ---
+  // Funzione per controllare i permessi in tempo reale
+  const checkPerms = (tipo) => {
+    if (!user) return false;
+    return PERMESSI[user.r]?.includes(tipo);
+  };
+
+  // Caricamento dati Archivio
   useEffect(() => {
-    if (paginaAttiva === 'archivio') {
-      supabase.from('congedi').select('*').order('id', { ascending: false })
-        .then(({ data }) => setPratiche(data || []));
+    if (pagina === 'archivio' && checkPerms("DIRIGENZA")) {
+      const fetchDati = async () => {
+        const { data } = await supabase.from('congedi').select('*').order('created_at', { ascending: false });
+        if (data) setPratiche(data);
+      };
+      fetchDati();
     }
-  }, [paginaAttiva]);
+  }, [pagina]);
 
-  // --- INVIA CONGEDO ---
-  const inviaCongedo = async () => {
+  const inviaPratica = async () => {
+    if (!form.lore || !form.tempo) return alert("Compila i campi obbligatori!");
     const { error } = await supabase.from('congedi').insert([{
-      nome_lore: form.nome_lore,
+      nome_lore: form.lore,
       nickname: user.n,
       ruolo: user.r,
-      periodo: form.periodo,
-      motivazione: form.motivazione,
+      periodo: form.tempo,
+      motivazione: form.motivo,
       stato: 'IN ATTESA'
     }]);
-    if (!error) setPaginaAttiva('successo');
+    if (!error) setPagina('successo');
   };
 
   if (!user) return (
-    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', fontFamily:'sans-serif'}}>
-      <div style={{background:'white', padding:'40px', borderRadius:'20px', textAlign:'center', width:'320px', boxShadow:'0 10px 25px rgba(0,0,0,0.4)'}}>
-        <h2 style={{color:'#1e3a8a', marginBottom:'10px', fontSize:'24px', fontWeight:'800'}}>ATLANTIS RP</h2>
-        <input style={loginInput} placeholder="Nickname" value={nick} onChange={(e) => setNick(e.target.value)} />
-        <button onClick={() => { if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); else setErr(true); }} style={loginBtn}>ACCEDI</button>
+    <div style={loginBg}>
+      <div style={loginCard}>
+        <h2 style={{color:'#1e3a8a', marginBottom:'20px'}}>ATLANTIS RP</h2>
+        <input style={inputStyle} placeholder="Nickname" value={nick} onChange={(e)=>setNick(e.target.value)} />
+        <button onClick={()=>{ if(DIPENDENTI[nick]) setUser({n:nick, r:DIPENDENTI[nick]}); }} style={submitBtn}>ACCEDI</button>
       </div>
     </div>
   );
 
   const Header = () => (
     <nav style={navStyle}>
-      <h2 style={{margin:0, fontSize:'18px', cursor:'pointer'}} onClick={() => setPaginaAttiva('dashboard')}>MUNICIPIO ATLANTIS</h2>
-      <div style={{display:'flex', alignItems:'center', gap:'20px'}}>
-        <div style={{textAlign:'right'}}>
-          <div style={{fontWeight:'bold'}}>{user.n}</div>
-          <div style={{fontSize:'10px', color:'#cbd5e1'}}>{user.r.replace(/_/g, ' ')}</div>
-        </div>
-        <button onClick={() => setUser(null)} style={logoutBtn}>LOGOUT</button>
+      <h2 onClick={() => setPagina('dashboard')} style={{cursor:'pointer', margin:0}}>MUNICIPIO</h2>
+      <div style={{display:'flex', gap:'20px', alignItems:'center'}}>
+        <div style={{textAlign:'right'}}><b style={{display:'block'}}>{user.n}</b><small>{user.r.replace(/_/g, ' ')}</small></div>
+        <button onClick={() => {setUser(null); setPagina('dashboard');}} style={logoutBtn}>LOGOUT</button>
       </div>
     </nav>
   );
 
-  // --- ARCHIVIO (SOLO DIREZIONE) ---
-  if (paginaAttiva === 'archivio' && PERMESSI[user.r].includes("DIRIGENZA")) return (
-    <div style={{minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif'}}>
-      <Header />
-      <div style={{padding:'40px', maxWidth:'1000px', margin:'0 auto'}}>
-        <button onClick={() => setPaginaAttiva('dashboard')} style={backBtn}>← Torna Home</button>
-        <div style={{background:'white', borderRadius:'15px', padding:'25px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)'}}>
-          <h2 style={{color:'#1e3a8a', marginBottom:'25px'}}>Gestione Richieste Congedi</h2>
-          <table style={{width:'100%', borderCollapse:'collapse'}}>
-            <thead>
-              <tr style={{textAlign:'left', color:'#64748b', fontSize:'12px', borderBottom:'2px solid #f1f5f9'}}>
-                <th style={{padding:'10px'}}>NICKNAME</th>
-                <th>NOME LORE</th>
-                <th>PERIODO</th>
-                <th>STATO</th>
-              </tr>
-            </thead>
+  // --- VISTA ARCHIVIO ---
+  if (pagina === 'archivio' && checkPerms("DIRIGENZA")) return (
+    <div style={pageBg}><Header />
+      <div style={container}>
+        <button onClick={()=>setPagina('dashboard')} style={backBtn}>← Home</button>
+        <div style={formCard}>
+          <h2 style={{color:'#1e3a8a', marginBottom:'20px'}}>Archivio Pratiche</h2>
+          <table style={{width:'100%', textAlign:'left', borderCollapse:'collapse'}}>
+            <thead><tr style={{borderBottom:'2px solid #f1f5f9', color:'#64748b', fontSize:'12px'}}>
+              <th style={{padding:'10px'}}>NICK</th><th>LORE</th><th>PERIODO</th><th>STATO</th>
+            </tr></thead>
             <tbody>
-              {pratiche.map((p) => (
-                <tr key={p.id} style={{borderBottom:'1px solid #f8fafc', fontSize:'13px'}}>
-                  <td style={{padding:'15px', fontWeight:'bold'}}>{p.nickname}</td>
-                  <td>{p.nome_lore}</td>
-                  <td>{p.periodo}</td>
-                  <td style={{color: p.stato === 'IN ATTESA' ? '#f59e0b' : '#10b981', fontWeight:'bold'}}>{p.stato}</td>
+              {pratiche.map((p, i) => (
+                <tr key={i} style={{borderBottom:'1px solid #f8fafc', fontSize:'13px'}}>
+                  <td style={{padding:'12px'}}><b>{p.nickname}</b></td><td>{p.nome_lore}</td><td>{p.periodo}</td>
+                  <td style={{color:'#f59e0b', fontWeight:'bold'}}>{p.stato}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {pratiche.length === 0 && <p style={{textAlign:'center', marginTop:'20px', color:'#94a3b8'}}>Nessuna pratica trovata.</p>}
         </div>
       </div>
     </div>
   );
 
-  // --- MODULO CONGEDO ---
-  if (paginaAttiva === 'congedo') return (
-    <div style={{minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif'}}>
-      <Header />
-      <div style={{padding:'40px', maxWidth:'600px', margin:'0 auto'}}>
+  // --- VISTA MODULO ---
+  if (pagina === 'congedo') return (
+    <div style={pageBg}><Header />
+      <div style={{...container, maxWidth:'600px'}}>
         <div style={formCard}>
-          <h2 style={{color:'#1e3a8a'}}>Modulo Congedo</h2>
-          <label style={labelStyle}>Nome Lore</label>
-          <input style={inputStyle} onChange={(e) => setForm({...form, nome_lore: e.target.value})} />
-          <label style={labelStyle}>Periodo</label>
-          <input style={inputStyle} placeholder="es. dal 1/05 al 5/05" onChange={(e) => setForm({...form, periodo: e.target.value})} />
-          <label style={labelStyle}>Motivo</label>
-          <textarea style={{...inputStyle, height:'100px'}} onChange={(e) => setForm({...form, motivazione: e.target.value})} />
-          <button onClick={inviaCongedo} style={submitBtn}>INVIA AL MUNICIPIO</button>
+          <h2 style={{color:'#1e3a8a'}}>Richiesta Congedo</h2>
+          <label style={labStyle}>Nome Lore</label>
+          <input style={inputStyle} onChange={(e)=>setForm({...form, lore: e.target.value})} />
+          <label style={labStyle}>Periodo</label>
+          <input style={inputStyle} placeholder="Dal... Al..." onChange={(e)=>setForm({...form, tempo: e.target.value})} />
+          <label style={labStyle}>Motivazione</label>
+          <textarea style={{...inputStyle, height:'100px'}} onChange={(e)=>setForm({...form, motivo: e.target.value})} />
+          <button onClick={inviaPratica} style={submitBtn}>INVIA AL MUNICIPIO</button>
         </div>
       </div>
     </div>
   );
 
-  if (paginaAttiva === 'successo') return (
-    <div style={{minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#f1f5f9', fontFamily:'sans-serif'}}>
-      <div style={{background:'white', padding:'40px', borderRadius:'20px', textAlign:'center', boxShadow:'0 10px 25px rgba(0,0,0,0.1)'}}>
-        <div style={{fontSize:'50px', color:'#10b981'}}>✓</div>
-        <h2>Inviata con Successo!</h2>
-        <button onClick={() => setPaginaAttiva('dashboard')} style={submitBtn}>TORNA ALLA HOME</button>
-      </div>
-    </div>
+  if (pagina === 'successo') return (
+    <div style={loginBg}><div style={loginCard}><h2>Inviata! ✅</h2><button onClick={()=>setPagina('dashboard')} style={submitBtn}>HOME</button></div></div>
   );
 
   return (
-    <div style={{minHeight:'100vh', background:'#f8fafc', fontFamily:'sans-serif'}}>
-      <Header />
-      <div style={{padding:'40px', maxWidth:'1200px', margin:'0 auto'}}>
-        <h1>Dashboard Uffici</h1>
-        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'25px'}}>
-          <Card t="Modulo Congedo" d="Richiedi ferie." c="#1e3a8a" onClick={() => setPaginaAttiva('congedo')} />
-          {PERMESSI[user.r].includes("DIRIGENZA") && <Card t="Archivio Centrale" d="Gestione pratiche." c="#ef4444" onClick={() => setPaginaAttiva('archivio')} />}
+    <div style={pageBg}><Header />
+      <div style={container}>
+        <h1 style={{marginBottom:'30px'}}>Benvenuto nel Gestionale</h1>
+        <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px'}}>
+          {checkPerms("CONGEDO") && <Card t="Modulo Congedo" d="Richiedi ferie." c="#1e3a8a" onClick={()=>setPagina('congedo')} />}
+          {checkPerms("DIRIGENZA") && <Card t="Archivio Centrale" d="Solo Direzione." c="#ef4444" onClick={()=>setPagina('archivio')} />}
         </div>
       </div>
     </div>
   );
 }
 
-// STILI (Mantenuti per coerenza)
+// STILI
+const loginBg = { minHeight:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0f172a', fontFamily:'sans-serif' };
+const loginCard = { background:'white', padding:'40px', borderRadius:'20px', textAlign:'center', width:'300px' };
+const pageBg = { minHeight:'100vh', background:'#f8fafc', fontFamily:'sans-serif' };
 const navStyle = { background:'#1e3a8a', color:'white', padding:'15px 40px', display:'flex', justifyContent:'space-between', alignItems:'center' };
-const logoutBtn = { background:'#ef4444', color:'white', border:'none', padding:'8px 12px', borderRadius:'6px', cursor:'pointer', fontSize:'11px' };
-const loginInput = { width:'100%', padding:'12px', marginBottom:'15px', borderRadius:'10px', border:'1px solid #ddd' };
-const loginBtn = { width:'100%', padding:'12px', background:'#1e3a8a', color:'white', border:'none', borderRadius:'10px', cursor:'pointer' };
+const logoutBtn = { background:'#ef4444', color:'white', border:'none', padding:'8px 15px', borderRadius:'6px', cursor:'pointer', fontWeight:'bold', fontSize:'10px' };
+const container = { padding:'40px', maxWidth:'1200px', margin:'0 auto' };
+const formCard = { background:'white', padding:'30px', borderRadius:'15px', boxShadow:'0 4px 15px rgba(0,0,0,0.05)' };
+const labStyle = { display:'block', fontSize:'11px', fontWeight:'bold', color:'#64748b', marginBottom:'5px' };
+const inputStyle = { width:'100%', padding:'10px', marginBottom:'15px', borderRadius:'8px', border:'1px solid #ddd', boxSizing:'border-box' };
+const submitBtn = { width:'100%', padding:'12px', background:'#1e3a8a', color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'bold' };
 const backBtn = { background:'none', border:'none', color:'#1e3a8a', fontWeight:'bold', cursor:'pointer', marginBottom:'10px' };
-const formCard = { background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 10px 40px rgba(0,0,0,0.05)' };
-const labelStyle = { display:'block', fontSize:'11px', fontWeight:'bold', color:'#475569', marginBottom:'5px' };
-const inputStyle = { width:'100%', padding:'10px', marginBottom:'15px', borderRadius:'8px', border:'1px solid #f1f5f9', boxSizing:'border-box' };
-const submitBtn = { width:'100%', padding:'15px', background:'#1e3a8a', color:'white', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer' };
 
 function Card({t, d, c, onClick}) {
   return (
-    <div style={{background:'white', padding:'25px', borderRadius:'15px', borderTop:`6px solid ${c}`, boxShadow:'0 4px 15px rgba(0,0,0,0.05)'}}>
-      <h3>{t}</h3>
-      <p style={{fontSize:'12px', color:'#64748b'}}>{d}</p>
-      <button onClick={onClick} style={{width:'100%', padding:'10px', borderRadius:'8px', border:'none', background:c, color:'white', fontWeight:'bold', cursor:'pointer'}}>ENTRA</button>
+    <div style={{background:'white', padding:'25px', borderRadius:'15px', borderTop:`6px solid ${c}`, boxShadow:'0 4px 10px rgba(0,0,0,0.05)'}}>
+      <h3>{t}</h3><p style={{fontSize:'12px', color:'#64748b'}}>{d}</p>
+      <button onClick={onClick} style={{width:'100%', padding:'10px', background:c, color:'white', border:'none', borderRadius:'8px', cursor:'pointer', fontWeight:'bold'}}>ENTRA</button>
     </div>
   );
 }
